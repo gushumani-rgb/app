@@ -1,0 +1,27 @@
+{
+  "name": "Anywhere Income",
+  "short_name": "Anywhere Income",
+  "description": "Work From Anywhere is your all-in-one guide to earning online, building passive income, and creating financial freedom.",
+  "start_url": "/<repo>/index.html",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "minimal-ui", "browser", "standalone"],
+  "background_color": "#ffffff",
+  "theme_color": "#cccccc",
+  "orientation": "natural",
+  "scope": "/<repo>/",
+  "dir": "ltr",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "images/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "images/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "id": "com.wfa.app"
+}
