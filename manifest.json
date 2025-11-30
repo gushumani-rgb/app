@@ -1,6 +1,6 @@
 {
   "background_color": "#ffffff",
-  "description": "Work From Anywhere is your all-in-one guide to earning online, building passive income, and creating financial freedom from any location.\n\nWhether you're a beginner or already making money online, this app gives you step-by-step tutorials, tools, and real income ideas that actually work.\n\nInside the app you’ll find:\n• Daily online income tips\n• Beginner-friendly earning methods\n• Passive income strategies\n• Work-from-home ideas\n• Mobile-only earning options\n• Tools, websites, and apps that pay\n• Motivation and guidance for long-term success\n\nStart your journey to financial freedom today.\nWork from anywhere. Earn from anywhere",
+  "description": "Work From Anywhere is your all-in-one guide to earning online, building passive income, and creating financial freedom from any location.",
   "dir": "ltr",
   "display": "standalone",
   "name": "Anywhere Income",
@@ -21,12 +21,5 @@
       "sizes": "512x512"
     }
   ],
-  "lang": "en",
-  "display_override": [
-    "window-controls-overlay",
-    "minimal-ui",
-    "browser",
-    "standalone"
-  ],
-  "id": "com.wfa.app"
+  "lang": "en"
 }
