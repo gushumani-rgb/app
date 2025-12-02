@@ -30,5 +30,15 @@
     "business",
     "education",
     "finance"
-  ]
+  ],
+  "share_target": {
+    "method": "GET",
+    "action": "https://thabogushumani.blogspot.com/share.html",
+    "params": {
+      "title": "Anywhere Income",
+      "text": "Check out this PWA!",
+      "url": "https://thabogushumani.blogspot.com",
+      "files": []
+    }
+  }
 }
