@@ -24,7 +24,10 @@
   "id": "com.wfa.app",
   "lang": "en",
   "display_override": [
-    "window-controls-overlay"
+    "window-controls-overlay",
+    "browser",
+    "minimal-ui",
+    "standalone"
   ],
   "categories": [
     "business",
