@@ -30,7 +30,6 @@
   "lang": "en",
   "display_override": [
     "window-controls-overlay",
-    "browser",
     "minimal-ui",
     "standalone"
   ],
