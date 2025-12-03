@@ -1,16 +1,16 @@
 name: Sync Blogger Posts
 
 on:
+  workflow_dispatch:       # Manual trigger
   schedule:
-    - cron: '0 * * * *'   # Runs every hour
-  workflow_dispatch:       # Allows manual run
+    - cron: '0 * * * *'   # Optional: run every hour
 
 jobs:
   update-blog:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repository
+      # 1️⃣ Checkout repository
       - name: Checkout repo
         uses: actions/checkout@v3
 
@@ -22,17 +22,24 @@ jobs:
 
       # 3️⃣ Install dependencies
       - name: Install dependencies
-        run: npm install node-fetch@2 jsdom
+        run: npm install node-fetch@2
 
-      # 4️⃣ Run the Blogger fetch & sync script
-      - name: Fetch Blogger posts and sync
-        run: node fetch-posts.js
+      # 4️⃣ Run the Blogger sync script
+      - name: Fetch Blogger posts
+        run: |
+          node fetch-posts.js
+          echo "Posts folder contents:"
+          ls -1 posts
 
-      # 5️⃣ Commit & push changes
+      # 5️⃣ Commit & push changes if any
       - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add posts/*
-          git commit -m "Sync Blogger posts" || echo "No changes to commit"
-          git push
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Sync Blogger posts"
+            git push
+          fi
