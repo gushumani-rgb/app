@@ -1,4 +1,4 @@
-// fetch-posts.js (JSONP-safe with summary)
+// fetch-posts.js (Fully featured, mobile-friendly)
 const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
@@ -59,6 +59,9 @@ let deletedCount = 0;
     const currentFiles = fs.existsSync(OUTPUT_DIR) ? fs.readdirSync(OUTPUT_DIR) : [];
     const activeFiles = [];
 
+    // Sort posts by published date (newest first)
+    posts.sort((a, b) => new Date(b.published.$t) - new Date(a.published.$t));
+
     for (const post of posts) {
       const title = post.title?.$t || 'untitled';
       const titleSlug = slugify(title);
@@ -94,11 +97,8 @@ ${content}
 
       if (writeFile) {
         fs.writeFileSync(filePath, html, 'utf8');
-        if (fs.existsSync(filePath)) {
-          createdCount++;
-        } else {
-          updatedCount++;
-        }
+        if (!fs.existsSync(filePath)) createdCount++;
+        else updatedCount++;
       }
     }
 
@@ -109,6 +109,31 @@ ${content}
         deletedCount++;
       }
     }
+
+    // Generate index.html with titles and dates
+    const indexHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${BLOG_TITLE} - All Posts</title>
+</head>
+<body>
+<h1>${BLOG_TITLE}</h1>
+<h2>All Posts</h2>
+<ul>
+${posts.map(post => {
+  const title = post.title?.$t || 'untitled';
+  const slug = slugify(title);
+  const date = post.published ? formatDate(post.published.$t) : 'Unknown date';
+  return `<li><a href="./${slug}.html">${title}</a> <em>(${date})</em></li>`;
+}).join('\n')}
+</ul>
+<p>Total posts: ${totalPosts}</p>
+</body>
+</html>`;
+
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'index.html'), indexHtml, 'utf8');
 
     // Print summary
     console.log("===== POSTS SYNC SUMMARY =====");
