@@ -157,5 +157,32 @@
       "protocol": "web+anywhereincome",
       "url": "/?url=%s"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "To Featured ",
+      "url": "https://thabogushumani.blogspot.com/p/redirecting-to-top-featured-post-l.html",
+      "description": "Go directly to featured top post"
+    },
+    {
+      "name": "Home",
+      "url": "https://thabogushumani.blogspot.com/",
+      "description": "Go to homepage"
+    },
+    {
+      "name": "About",
+      "url": "https://thabogushumani.blogspot.com/p/about.html",
+      "description": "Learn more about the blog and author "
+    },
+    {
+      "name": "Contact",
+      "url": "https://thabogushumani.blogspot.com/p/contact.html",
+      "description": "Contact the author "
+    },
+    {
+      "name": "Privacy Policy",
+      "url": "https://thabogushumani.blogspot.com/p/privacy-policy.html",
+      "description": "Read privacy policy"
+    }
   ]
 }
