@@ -1,49 +1,37 @@
-name: Sync Blogger Posts (Mobile-Friendly)
+name: Sync Blogger Posts
 
 on:
-  workflow_dispatch:       # Manual trigger
+  workflow_dispatch: # Manual trigger from GitHub mobile
   schedule:
-    - cron: '0 * * * *'   # Optional: run every hour
+    - cron: '0 * * * *' # Optional: every hour
 
 jobs:
   update-blog:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Setup Node.js
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      # 3️⃣ Install dependencies
-      - name: Install dependencies
+      - name: Install node-fetch
         run: npm install node-fetch@2
 
-      # 4️⃣ Fetch Blogger posts and show summary
-      - name: Fetch Blogger posts
-        run: |
-          node fetch-posts.js > summary.log 2>&1
-          echo "===== POSTS SYNC SUMMARY ====="
-          grep -E "Posts created|Posts updated|Posts deleted|Total posts" summary.log || echo "No posts processed"
-          echo "===== END OF SUMMARY ====="
-          echo ""
-          echo "📌 Access all posts here:"
-          echo "https://gushumani-rgb.github.io/app/posts/index.html"
+      - name: Run fetch-posts.js
+        run: node fetch-posts.js
 
-      # 5️⃣ Commit & push changes if any
-      - name: Commit and push changes
+      - name: Commit & push index.html
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add index.html
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Sync Blogger posts"
+            git commit -m "Update index.html from Blogger"
             git push
-            echo "Changes committed and pushed successfully."
+          fi
