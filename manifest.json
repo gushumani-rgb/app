@@ -14,6 +14,16 @@
       "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEja4HGDac9YsLSAyq-heDBYmHTdaNcGj-P9f_JsWJoyEFV7Obdccl9iAsZlKOiT9Om_B_N1KO8aH23oPd76nxLZQ0WRQS5yczdU4QzIxOhyphenhyphen0OKX-0iwwy0qNIy1UrE3R2E6T5jIJBZU0HfXqP-tiaiGlNBG7vweCX_kFK9QDH4x8Le1K1eWOLMV2nOegg2A/s1600/1000072745.png",
       "sizes": "72x72",
       "type": "image/png"
+    },
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi44TrGazpFJbyMllXIRhS_5rqrbQVSzLxNgQNbpLZnGGQfkHThIJK7rRkR1yCGThl_Vi0gUP4e6T_lPiDJxDuShEtvR05zt7rAG4oxtkVtkj3TxhnJMwlfQJ0oj1x530MlN5FSsZtvqNU5l9IO1jz1Fj6vkGK9nyKQQCwDbJLXHIxQnjjn28OuaoqwWV6f/s1600/1000071209.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgs2gLAxRX3iq72UfgCgwY_4drVqskU-fwg2KC8coknr_AtqIEZgxFRykGFmfZc5lpoisrXgtDEmWzXLDSheO9PIk_LouD8ohFvElH4xU1e73hqV2EDxOY-88CQ7vuZ7sGTNPK4g1AN6Atrio7c3DRihyphenhyphenRBhkkafQHRHujgqXclvz_Nn5R3IwVcRnHchRRv/s1600/1000071410.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ],
   "id": "com.wfa.app",
@@ -39,77 +49,35 @@
       "files": [
         {
           "name": "image",
-          "accept": [
-            ".png",
-            ".jpeg",
-            ".gif",
-            ".webp",
-            ".svg",
-            ".bmp",
-            ".ico"
-          ]
+          "accept": [".png", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"]
         },
         {
           "name": "video",
-          "accept": [
-            ".mpeg",
-            ".mp4",
-            ".aac",
-            ".ogg",
-            ".flac",
-            ".aiff",
-            ".mov",
-            ".avi",
-            ".mkv"
-          ]
+          "accept": [".mpeg", ".mp4", ".aac", ".ogg", ".flac", ".aiff", ".mov", ".avi", ".mkv"]
         },
         {
           "name": "audio",
-          "accept": [
-            ".mp3",
-            ".m4a",
-            ".ogg",
-            ".flac",
-            ".aiff"
-          ]
+          "accept": [".mp3", ".m4a", ".ogg", ".flac", ".aiff"]
         },
         {
           "name": "archives",
-          "accept": [
-            ".7z",
-            ".zip",
-            ".rar"
-          ]
+          "accept": [".7z", ".zip", ".rar"]
         },
         {
           "name": "documents",
-          "accept": [
-            ".pdf",
-            ".doc",
-            ".docx",
-            ".txt"
-          ]
+          "accept": [".pdf", ".doc", ".docx", ".txt"]
         },
         {
           "name": "html",
-          "accept": [
-            ".html"
-          ]
+          "accept": [".html"]
         },
         {
           "name": "text",
-          "accept": [
-            ".txt"
-          ]
+          "accept": [".txt"]
         },
         {
           "name": "sheets",
-          "accept": [
-            ".xls",
-            ".csv",
-            ".ppt",
-            ".pptx"
-          ]
+          "accept": [".xls", ".csv", ".ppt", ".pptx"]
         }
       ]
     }
