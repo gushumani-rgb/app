@@ -83,7 +83,7 @@
     "params": {
       "title": "Anywhere Income",
       "text": "Check out this PWA!",
-      "url": "https://thabogushumani.blogspot.com",
+      "url": "https://thabogushumani.blogspot.com/",
       "files": [
         { "name": "image", "accept": [".png", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"] },
         { "name": "video", "accept": [".mpeg", ".mp4", ".aac", ".ogg", ".flac", ".aiff", ".mov", ".avi", ".mkv"] },
