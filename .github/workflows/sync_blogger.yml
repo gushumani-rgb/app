@@ -2,27 +2,33 @@ name: Sync Blogger Posts
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *'   # Runs every hour
+  workflow_dispatch:       # Allows manual run
 
 jobs:
   update-blog:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ Checkout the repository
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      # 2️⃣ Setup Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: npm install node-fetch@2 jsdom
 
+      # 4️⃣ Run the Blogger fetch & sync script
       - name: Fetch Blogger posts and sync
         run: node fetch-posts.js
 
+      # 5️⃣ Commit & push changes
       - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
