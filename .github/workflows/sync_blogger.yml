@@ -2,7 +2,6 @@ name: Sync Blogger Posts
 
 on:
   schedule:
-    # Runs every hour
     - cron: '0 * * * *'
   workflow_dispatch:
 
@@ -21,35 +20,53 @@ jobs:
       - name: Install dependencies
         run: npm install node-fetch@2 jsdom
 
-      - name: Fetch Blogger posts and convert to HTML
+      - name: Fetch Blogger posts and sync
         run: |
           node -e "
           const fetch = require('node-fetch');
           const fs = require('fs');
-          const { JSDOM } = require('jsdom');
+          const crypto = require('crypto');
 
           const BLOG_JSON = 'https://thabogushumani.blogspot.com/feeds/posts/default?alt=json';
           const OUTPUT_DIR = './posts';
           const BLOG_TITLE = 'Work From Anywhere';
+          const MAX_POSTS = 50; // Maximum number of posts to fetch per run
 
-          if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
+          if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
           function formatDate(dateStr) {
             const date = new Date(dateStr);
             return date.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
           }
 
-          async function main() {
-            const res = await fetch(BLOG_JSON);
-            const data = await res.json();
-            const posts = data.feed.entry || [];
-            for (const post of posts) {
-              const titleSlug = post.title.$t.replace(/[^a-z0-9]/gi,'-').toLowerCase();
-              const content = post.content.$t;
-              const author = post.author[0].name.$t;
-              const published = formatDate(post.published.$t);
+          function hash(str) {
+            return crypto.createHash('sha256').update(str, 'utf8').digest('hex');
+          }
 
-              const html = \`<!DOCTYPE html>
+          (async () => {
+            try {
+              const res = await fetch(BLOG_JSON);
+              const data = await res.json();
+              const posts = data.feed.entry || [];
+              
+              // Limit posts per run
+              const postsToProcess = posts.slice(0, MAX_POSTS);
+
+              const currentFiles = fs.existsSync(OUTPUT_DIR) 
+                ? fs.readdirSync(OUTPUT_DIR) 
+                : [];
+
+              const activeFiles = [];
+
+              let updated = false;
+
+              for (const post of postsToProcess) {
+                const titleSlug = post.title.$t.replace(/[^a-z0-9]/gi,'-').toLowerCase();
+                const content = post.content.$t;
+                const author = post.author[0].name.$t;
+                const published = formatDate(post.published.$t);
+
+                const html = \`<!DOCTYPE html>
 <html lang='en'>
 <head>
 <meta charset='UTF-8'>
@@ -65,11 +82,38 @@ jobs:
 </body>
 </html>\`;
 
-              fs.writeFileSync(\`\${OUTPUT_DIR}/\${titleSlug}.html\`, html);
-            }
-          }
+                const filePath = \`\${OUTPUT_DIR}/\${titleSlug}.html\`;
+                activeFiles.push(\`\${titleSlug}.html\`);
 
-          main();
+                let writeFile = true;
+                if (fs.existsSync(filePath)) {
+                  const existingHash = hash(fs.readFileSync(filePath, 'utf8'));
+                  const newHash = hash(html);
+                  if (existingHash === newHash) writeFile = false;
+                }
+
+                if (writeFile) {
+                  fs.writeFileSync(filePath, html);
+                  console.log('Saved/Updated:', filePath);
+                  updated = true;
+                }
+              }
+
+              // Remove files that no longer exist in the fetched posts
+              for (const file of currentFiles) {
+                if (!activeFiles.includes(file)) {
+                  fs.unlinkSync(\`\${OUTPUT_DIR}/\${file}\`);
+                  console.log('Deleted:', file);
+                  updated = true;
+                }
+              }
+
+              if (!updated) console.log('No changes detected');
+
+            } catch (err) {
+              console.error(err);
+            }
+          })();
           "
 
       - name: Commit and push changes
@@ -77,5 +121,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add posts/*
-          git commit -m "Update Blogger posts" || echo "No changes to commit"
+          git commit -m "Sync Blogger posts" || echo "No changes to commit"
           git push
