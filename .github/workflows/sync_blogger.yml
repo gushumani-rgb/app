@@ -1,4 +1,4 @@
-name: Sync Blogger Posts (Phone-Friendly)
+name: Sync Blogger Posts (Mobile-Friendly)
 
 on:
   workflow_dispatch:       # Manual trigger
@@ -24,13 +24,16 @@ jobs:
       - name: Install dependencies
         run: npm install node-fetch@2
 
-      # 4️⃣ Fetch Blogger posts and show only summary
+      # 4️⃣ Fetch Blogger posts and show summary
       - name: Fetch Blogger posts
         run: |
           node fetch-posts.js > summary.log 2>&1
           echo "===== POSTS SYNC SUMMARY ====="
           grep -E "Posts created|Posts updated|Posts deleted|Total posts" summary.log || echo "No posts processed"
           echo "===== END OF SUMMARY ====="
+          echo ""
+          echo "📌 Access all posts here:"
+          echo "https://gushumani-rgb.github.io/app/posts/index.html"
 
       # 5️⃣ Commit & push changes if any
       - name: Commit and push changes
