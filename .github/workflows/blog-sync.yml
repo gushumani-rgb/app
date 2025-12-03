@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -27,6 +27,14 @@ jobs:
       # 4️⃣ Run fetch-posts.js to generate index.json
       - name: Generate index.json
         run: node fetch-posts.js
+
+      # 4️⃣a Debug step: list files and show index.json
+      - name: Debug: check index.json
+        run: |
+          echo "Listing files in repo root:"
+          ls -la
+          echo "Showing first 500 characters of index.json:"
+          head -c 500 index.json || echo "index.json not found"
 
       # 5️⃣ Commit & push updated index.json
       - name: Commit & push changes
