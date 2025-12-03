@@ -1,0 +1,81 @@
+name: Sync Blogger Posts
+
+on:
+  schedule:
+    # Runs every hour
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  update-blog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install node-fetch@2 jsdom
+
+      - name: Fetch Blogger posts and convert to HTML
+        run: |
+          node -e "
+          const fetch = require('node-fetch');
+          const fs = require('fs');
+          const { JSDOM } = require('jsdom');
+
+          const BLOG_JSON = 'https://thabogushumani.blogspot.com/feeds/posts/default?alt=json';
+          const OUTPUT_DIR = './posts';
+          const BLOG_TITLE = 'Work From Anywhere';
+
+          if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
+
+          function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+          }
+
+          async function main() {
+            const res = await fetch(BLOG_JSON);
+            const data = await res.json();
+            const posts = data.feed.entry || [];
+            for (const post of posts) {
+              const titleSlug = post.title.$t.replace(/[^a-z0-9]/gi,'-').toLowerCase();
+              const content = post.content.$t;
+              const author = post.author[0].name.$t;
+              const published = formatDate(post.published.$t);
+
+              const html = \`<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>\${post.title.$t} | \${BLOG_TITLE}</title>
+</head>
+<body>
+<h1>\${post.title.$t}</h1>
+<p><em>Blog: \${BLOG_TITLE}</em></p>
+<p><strong>Author:</strong> \${author} | <strong>Published:</strong> \${published}</p>
+<hr>
+\${content}
+</body>
+</html>\`;
+
+              fs.writeFileSync(\`\${OUTPUT_DIR}/\${titleSlug}.html\`, html);
+            }
+          }
+
+          main();
+          "
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add posts/*
+          git commit -m "Update Blogger posts" || echo "No changes to commit"
+          git push
