@@ -24,22 +24,42 @@ jobs:
       - name: Install dependencies
         run: npm install node-fetch@2
 
-      # 4️⃣ Run the Blogger sync script
-      - name: Fetch Blogger posts
+      # 4️⃣ Validate Blogger feed before running script
+      - name: Validate Blogger feed
         run: |
-          node fetch-posts.js
-          echo "Posts folder contents:"
-          ls -1 posts
+          FEED_URL="https://thabogushumani.blogspot.com/feeds/posts/default?alt=json&max-results=50"
+          echo "Fetching Blogger feed..."
+          RESPONSE=$(curl -s -w "%{http_code}" "$FEED_URL" -o feed.json)
+          if [ "$RESPONSE" != "200" ]; then
+            echo "ERROR: Failed to fetch feed. HTTP status: $RESPONSE"
+            exit 1
+          fi
+          if ! grep -q '"feed"' feed.json; then
+            echo "ERROR: Feed JSON does not contain 'feed' key. Possibly JSONP or invalid JSON."
+            exit 1
+          fi
+          echo "Feed validation passed. Preview first 20 lines:"
+          head -n 20 feed.json
 
-      # 5️⃣ Commit & push changes if any
+      # 5️⃣ Run the Blogger sync script
+      - name: Fetch Blogger posts (JSONP-safe)
+        run: |
+          echo "===== START fetch-posts.js ====="
+          node fetch-posts.js
+          echo "===== END fetch-posts.js ====="
+
+      # 6️⃣ Commit & push changes if any
       - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
+          echo "===== GIT STATUS ====="
+          git status
+          echo "======================"
           if git diff --cached --quiet; then
-            echo "No changes to commit."
+            echo "No changes to commit. Workflow complete."
           else
             git commit -m "Sync Blogger posts"
             git push
-          fi
+            echo "Changes committed and pushed successfully."
