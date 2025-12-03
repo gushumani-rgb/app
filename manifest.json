@@ -162,12 +162,12 @@
     {
       "name": "Top Featured",
       "url": "https://thabogushumani.blogspot.com/p/redirecting-to-top-featured-post-l.html",
-      "description": "Go to top featured post"
+      "description": "Go directly to the top featured post"
     },
     {
       "name": "Home",
       "url": "https://thabogushumani.blogspot.com/",
-      "description": "Back to homepage"
+      "description": "Return to the homepage"
     },
     {
       "name": "About",
@@ -177,12 +177,15 @@
     {
       "name": "Contact",
       "url": "https://thabogushumani.blogspot.com/p/contact.html",
-      "description": "Contact the author"
+      "description": "Reach out to the author"
     },
     {
       "name": "Privacy Policy",
       "url": "https://thabogushumani.blogspot.com/p/privacy-policy.html",
       "description": "Read privacy policy"
     }
-  ]
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
