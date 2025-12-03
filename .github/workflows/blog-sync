@@ -1,0 +1,42 @@
+name: Sync Blogger Posts
+
+on:
+  workflow_dispatch: # Manual trigger from GitHub mobile
+  schedule:
+    - cron: '0 * * * *' # Optional: runs every hour
+
+jobs:
+  update-blog:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      # 3️⃣ Install node-fetch
+      - name: Install node-fetch
+        run: npm install node-fetch@2
+
+      # 4️⃣ Run fetch-posts.js to generate index.json
+      - name: Generate index.json
+        run: node fetch-posts.js
+
+      # 5️⃣ Commit & push updated index.json (and index.html if it was created)
+      - name: Commit & push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.json index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update index.json from Blogger"
+            git push
+          fi
