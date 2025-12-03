@@ -6,14 +6,16 @@ const crypto = require('crypto');
 
 // Config
 const BLOG_JSON = 'https://thabogushumani.blogspot.com/feeds/posts/default?alt=json';
-const OUTPUT_DIR = path.join(__dirname, 'posts'); // ensures folder is in repo root
+const OUTPUT_DIR = path.join(__dirname, 'posts'); // folder in repo root
 const BLOG_TITLE = 'Work From Anywhere';
-const MAX_POSTS = 50; // maximum posts per run
+const MAX_POSTS = 50; // max posts per run
 
 // Ensure posts folder exists
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   console.log('Created folder:', OUTPUT_DIR);
+} else {
+  console.log('Folder already exists:', OUTPUT_DIR);
 }
 
 // Helper functions
@@ -29,12 +31,31 @@ function hash(str) {
 // Main async function
 (async () => {
   try {
-    const res = await fetch(BLOG_JSON);
+    console.log('Fetching JSON feed:', BLOG_JSON);
+
+    // Follow redirects
+    const res = await fetch(BLOG_JSON, { redirect: 'follow' });
+    console.log('Response status:', res.status);
+
+    if (!res.ok) {
+      console.error('Failed to fetch feed:', res.statusText);
+      return;
+    }
+
     const data = await res.json();
+
+    if (!data.feed) {
+      console.error('Feed data missing');
+      return;
+    }
+
     const posts = data.feed.entry || [];
+    console.log('Number of posts fetched:', posts.length);
 
     if (!posts.length) {
-      console.log('No posts found');
+      console.log('No posts found, creating placeholder file...');
+      const placeholder = path.join(OUTPUT_DIR, 'no-posts.html');
+      fs.writeFileSync(placeholder, `<html><body><h1>No posts found</h1></body></html>`);
       return;
     }
 
@@ -44,7 +65,6 @@ function hash(str) {
     const currentFiles = fs.existsSync(OUTPUT_DIR)
       ? fs.readdirSync(OUTPUT_DIR)
       : [];
-
     const activeFiles = [];
     let updated = false;
 
@@ -87,7 +107,7 @@ ${content}
       }
     }
 
-    // Remove files that no longer exist in Blogger
+    // Remove deleted posts
     for (const file of currentFiles) {
       if (!activeFiles.includes(file)) {
         fs.unlinkSync(path.join(OUTPUT_DIR, file));
