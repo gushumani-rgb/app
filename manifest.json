@@ -152,31 +152,10 @@
       "id": "com.wework.ondemand"
     }
   ],
-  "shortcuts": [
+  "protocol_handlers": [
     {
-      "name": "Top Featured",
-      "url": "https://thabogushumani.blogspot.com/p/redirecting-to-top-featured-post-l.html",
-      "description": "Go directly to the top featured post"
-    },
-    {
-      "name": "Home",
-      "url": "https://thabogushumani.blogspot.com/",
-      "description": "Return to the homepage"
-    },
-    {
-      "name": "About",
-      "url": "https://thabogushumani.blogspot.com/p/about.html",
-      "description": "Learn more about the blog and author"
-    },
-    {
-      "name": "Contact",
-      "url": "https://thabogushumani.blogspot.com/p/contact.html",
-      "description": "Reach out to the author"
-    },
-    {
-      "name": "Privacy Policy",
-      "url": "https://thabogushumani.blogspot.com/p/privacy-policy.html",
-      "description": "Read the Privacy Policy "
+      "protocol": "web+anywhereincome",
+      "url": "/?url=%s"
     }
   ]
 }
