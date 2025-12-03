@@ -49,37 +49,107 @@
       "files": [
         {
           "name": "image",
-          "accept": [".png", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"]
+          "accept": [
+            ".png",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".svg",
+            ".bmp",
+            ".ico"
+          ]
         },
         {
           "name": "video",
-          "accept": [".mpeg", ".mp4", ".aac", ".ogg", ".flac", ".aiff", ".mov", ".avi", ".mkv"]
+          "accept": [
+            ".mpeg",
+            ".mp4",
+            ".aac",
+            ".ogg",
+            ".flac",
+            ".aiff",
+            ".mov",
+            ".avi",
+            ".mkv"
+          ]
         },
         {
           "name": "audio",
-          "accept": [".mp3", ".m4a", ".ogg", ".flac", ".aiff"]
+          "accept": [
+            ".mp3",
+            ".m4a",
+            ".ogg",
+            ".flac",
+            ".aiff"
+          ]
         },
         {
           "name": "archives",
-          "accept": [".7z", ".zip", ".rar"]
+          "accept": [
+            ".7z",
+            ".zip",
+            ".rar"
+          ]
         },
         {
           "name": "documents",
-          "accept": [".pdf", ".doc", ".docx", ".txt"]
+          "accept": [
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".txt"
+          ]
         },
         {
           "name": "html",
-          "accept": [".html"]
+          "accept": [
+            ".html"
+          ]
         },
         {
           "name": "text",
-          "accept": [".txt"]
+          "accept": [
+            ".txt"
+          ]
         },
         {
           "name": "sheets",
-          "accept": [".xls", ".csv", ".ppt", ".pptx"]
+          "accept": [
+            ".xls",
+            ".csv",
+            ".ppt",
+            ".pptx"
+          ]
         }
       ]
     }
-  }
-}
+  },
+  "prefer_related_applications": true,
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.remotework",
+      "id": "com.remotework"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.jenos.jobsitesonline",
+      "id": "com.jenos.jobsitesonline"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.umongous.paidviewpoint",
+      "id": "com.umongous.paidviewpoint"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.zareklamy",
+      "id": "com.zareklamy"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.wework.ondemand",
+      "id": "com.wework.ondemand"
+    }
+  ]
+        }
