@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const BLOG_JSON = 'https://thabogushumani.blogspot.com/feeds/posts/default?alt=json&max-results=50';
-const INDEX_PATH = path.join(__dirname, 'index.html');
+const INDEX_HTML_PATH = path.join(__dirname, 'index.html');
+const INDEX_JSON_PATH = path.join(__dirname, 'index.json');
 const BLOG_TITLE = 'Work From Anywhere';
 
 function formatDate(dateStr) {
@@ -22,27 +23,27 @@ function parseBloggerJSON(body) {
   try {
     const res = await fetch(BLOG_JSON, { redirect: 'follow' });
     if (!res.ok) throw new Error(`Failed to fetch feed: ${res.statusText}`);
-
     const body = await res.text();
     const data = parseBloggerJSON(body);
 
     const posts = data.feed?.entry || [];
     posts.sort((a, b) => new Date(b.published.$t) - new Date(a.published.$t));
 
-    const postsHtml = posts.map(post => {
-      const title = post.title?.$t || 'untitled';
-      const author = post.author?.[0]?.name?.$t || 'Unknown';
-      const published = post.published ? formatDate(post.published.$t) : 'Unknown date';
-      const content = post.content?.$t || '';
-      return `<article>
-<h2>${title}</h2>
-<p><strong>Author:</strong> ${author} | <strong>Published:</strong> ${published}</p>
-<hr>
-${content}
-</article>`;
-    }).join('\n');
+    // Create JSON array
+    const postsJson = posts.map(post => ({
+      title: post.title?.$t || 'untitled',
+      author: post.author?.[0]?.name?.$t || 'Unknown',
+      published: post.published ? formatDate(post.published.$t) : 'Unknown date',
+      content: post.content?.$t || ''
+    }));
 
-    const indexHtml = `<!DOCTYPE html>
+    // Save JSON
+    fs.writeFileSync(INDEX_JSON_PATH, JSON.stringify(postsJson, null, 2), 'utf8');
+    console.log(`[SUCCESS] index.json updated with ${posts.length} posts.`);
+
+    // Optional: keep minimal index.html template
+    if (!fs.existsSync(INDEX_HTML_PATH)) {
+      const htmlTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -57,14 +58,32 @@ hr { margin: 15px 0; }
 </head>
 <body>
 <h1>${BLOG_TITLE}</h1>
-<p>Total posts: ${posts.length}</p>
-${postsHtml}
+<p>Total posts: <span id="total-posts">0</span></p>
+<div id="posts"></div>
+
+<script>
+fetch('index.json')
+  .then(res => res.json())
+  .then(posts => {
+    document.getElementById('total-posts').textContent = posts.length;
+    const container = document.getElementById('posts');
+    posts.forEach(p => {
+      const art = document.createElement('article');
+      art.innerHTML = \`<h2>\${p.title}</h2>
+<p><strong>Author:</strong> \${p.author} | <strong>Published:</strong> \${p.published}</p>
+<hr>
+\${p.content}\`;
+      container.appendChild(art);
+    });
+  });
+</script>
+
 </body>
 </html>`;
+      fs.writeFileSync(INDEX_HTML_PATH, htmlTemplate, 'utf8');
+    }
 
-    fs.writeFileSync(INDEX_PATH, indexHtml, 'utf8');
-    console.log(`[SUCCESS] index.html updated with ${posts.length} posts.`);
   } catch (err) {
-    console.error('[ERROR] Fetching or processing posts failed:', err);
+    console.error('[ERROR]', err);
   }
 })();
