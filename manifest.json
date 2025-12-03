@@ -9,13 +9,20 @@
   "background_color": "#ffffff",
   "theme_color": "#cccccc",
   "dir": "ltr",
-
-  "screenshots": [
-    {
-      "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_154444_Chrome-ezgif.com-resize.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "narrow"
+  
+    "screenshots": [
+   {
+    "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_154444_Chrome-ezgif.com-resize.png",
+    "sizes": "1280x720",
+    "type": "image/png",
+    "form_factor": "wide"
+   },
+   {
+    "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_154444_Chrome-ezgif.com-resize.png",
+    "sizes": "1280x720",
+    "type": "image/png",
+    "form_factor": "narrow"
+  
     },
     {
       "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_154903_Chrome-ezgif.com-resize.png",
