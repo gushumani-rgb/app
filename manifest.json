@@ -160,24 +160,24 @@
   ],
   "shortcuts": [
     {
-      "name": "To Featured ",
+      "name": "Top Featured",
       "url": "https://thabogushumani.blogspot.com/p/redirecting-to-top-featured-post-l.html",
-      "description": "Go directly to featured top post"
+      "description": "Go to top featured post"
     },
     {
       "name": "Home",
       "url": "https://thabogushumani.blogspot.com/",
-      "description": "Go to homepage"
+      "description": "Back to homepage"
     },
     {
       "name": "About",
       "url": "https://thabogushumani.blogspot.com/p/about.html",
-      "description": "Learn more about the blog and author "
+      "description": "Learn more about the blog and author"
     },
     {
       "name": "Contact",
       "url": "https://thabogushumani.blogspot.com/p/contact.html",
-      "description": "Contact the author "
+      "description": "Contact the author"
     },
     {
       "name": "Privacy Policy",
