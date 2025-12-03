@@ -41,7 +41,82 @@
       "title": "Anywhere Income",
       "text": "Check out this PWA!",
       "url": "https://thabogushumani.blogspot.com",
-      "files": []
+      "files": [
+        {
+          "name": "image",
+          "accept": [
+            ".png",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".svg",
+            ".bmp",
+            ".ico"
+          ]
+        },
+        {
+          "name": "video",
+          "accept": [
+            ".mpeg",
+            ".mp4",
+            ".aac",
+            ".ogg",
+            ".flac",
+            ".aiff",
+            ".mov",
+            ".avi",
+            ".mkv"
+          ]
+        },
+        {
+          "name": "audio",
+          "accept": [
+            ".mp3",
+            ".m4a",
+            ".ogg",
+            ".flac",
+            ".aiff"
+          ]
+        },
+        {
+          "name": "archives",
+          "accept": [
+            ".7z",
+            ".zip",
+            ".rar"
+          ]
+        },
+        {
+          "name": "documents",
+          "accept": [
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".txt"
+          ]
+        },
+        {
+          "name": "html",
+          "accept": [
+            ".html"
+          ]
+        },
+        {
+          "name": "text",
+          "accept": [
+            ".txt"
+          ]
+        },
+        {
+          "name": "sheets",
+          "accept": [
+            ".xls",
+            ".csv",
+            ".ppt",
+            ".pptx"
+          ]
+        }
+      ]
     }
   }
 }
