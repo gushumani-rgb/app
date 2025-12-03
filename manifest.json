@@ -9,6 +9,40 @@
   "background_color": "#ffffff",
   "theme_color": "#cccccc",
   "dir": "ltr",
+
+  "screenshots": [
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh8F5YN8YJTgXCwggbg2dCddYo69rNm_McslheZ2C0qtfFa59oqtSu3rchyTVXtN2H9Y_v2OZlIok-JuHEGIz0qeW5cSUiRQSY0elnECpNjWydxufJ5zdIdoVDcSrqSvXSCmpUaw1iOtPeMydx9-6vfe69XkJJXEpFzINYoIsxYwI8VKW-MuYNIh8uPLq6Y/s1600/1000073854.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEin3OsXEpB6OHPxNqt3YgbS45Wid3nKR3LhkdFKXoZs4b8n60pMtnpj1Bhu3_OBChyphenhyphenRRzMySj80rUm4OibdW6AW6to4HLxPtDlh9psH7kC31s-TEuQt-7XbhbheY5g0ZE3nAhHglbZg9AxFmFvjCweB8n2NUmB6iaDE30oSn7h2DJFO6QRCW30Ectct_MRT/s1600/1000073855.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjnNeLNhXtcc67pYwY0l0jOLJACet1L7eTvKSzlRSmCTbmyDhMCnBZj9YLZBd0tPC53BpkVpUn9-H2vlxN6voce5m-PJgvnubet8aJy3D50UYs6W0G_93RV8FWH60YfS6fV7Sco9bSxPIjr_xc08xZA4s73bA1HQWTajT44QH4DETJ8YZjh5TH7NVNd57MH/s1600/1000073856.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjIG3q8iKOVZ7bXqNXSJCUmrvmjkytQSIiYidTFS9b4vlDOQu286xvd1KMCklQqpDKhKcYITCEYqajXrO8PYMHSMuve8E8Iol5Oi25KaAyVTixFpxvZDOzni_5XTdOR2hrPapQB1nQIW1292TZ4Mfx3wuNSKnlEONfc12tkgMm9buUDtaV8K1E2-vtMChwD/s1600/1000073857.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjLzPC134tqgSfjLdpNpsKW9dBcWeSr8_a6okY7d08OztCLxefl82v-USvqVW_OZtJiJKFKTnBpCPGQXAcznO-nHNmBcgiQmBdgVdBZ6A4H6wA5FoQvzJLiZgZJ3YK5cNfAOzfvfU9g2IpANIQ6yVqciPYTvhDBRy_fG4ZgGzEG6XGG_QxAOVm2R9pEEDj/s1600/1000073858.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+
   "icons": [
     {
       "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEja4HGDac9YsLSAyq-heDBYmHTdaNcGj-P9f_JsWJoyEFV7Obdccl9iAsZlKOiT9Om_B_N1KO8aH23oPd76nxLZQ0WRQS5yczdU4QzIxOhyphenhyphen0OKX-0iwwy0qNIy1UrE3R2E6T5jIJBZU0HfXqP-tiaiGlNBG7vweCX_kFK9QDH4x8Le1K1eWOLMV2nOegg2A/s1600/1000072745.png",
@@ -26,6 +60,7 @@
       "type": "image/png"
     }
   ],
+
   "id": "com.wfa.app",
   "lang": "en",
   "display_override": [
@@ -33,11 +68,8 @@
     "minimal-ui",
     "standalone"
   ],
-  "categories": [
-    "business",
-    "education",
-    "finance"
-  ],
+  "categories": ["business", "education", "finance"],
+
   "share_target": {
     "method": "GET",
     "action": "https://thabogushumani.blogspot.com/share.html",
@@ -46,117 +78,35 @@
       "text": "Check out this PWA!",
       "url": "https://thabogushumani.blogspot.com",
       "files": [
-        {
-          "name": "image",
-          "accept": [
-            ".png",
-            ".jpeg",
-            ".gif",
-            ".webp",
-            ".svg",
-            ".bmp",
-            ".ico"
-          ]
-        },
-        {
-          "name": "video",
-          "accept": [
-            ".mpeg",
-            ".mp4",
-            ".aac",
-            ".ogg",
-            ".flac",
-            ".aiff",
-            ".mov",
-            ".avi",
-            ".mkv"
-          ]
-        },
-        {
-          "name": "audio",
-          "accept": [
-            ".mp3",
-            ".m4a",
-            ".ogg",
-            ".flac",
-            ".aiff"
-          ]
-        },
-        {
-          "name": "archives",
-          "accept": [
-            ".7z",
-            ".zip",
-            ".rar"
-          ]
-        },
-        {
-          "name": "documents",
-          "accept": [
-            ".pdf",
-            ".doc",
-            ".docx",
-            ".txt"
-          ]
-        },
-        {
-          "name": "html",
-          "accept": [
-            ".html"
-          ]
-        },
-        {
-          "name": "text",
-          "accept": [
-            ".txt"
-          ]
-        },
-        {
-          "name": "sheets",
-          "accept": [
-            ".xls",
-            ".csv",
-            ".ppt",
-            ".pptx"
-          ]
-        }
+        { "name": "image", "accept": [".png", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"] },
+        { "name": "video", "accept": [".mpeg", ".mp4", ".aac", ".ogg", ".flac", ".aiff", ".mov", ".avi", ".mkv"] },
+        { "name": "audio", "accept": [".mp3", ".m4a", ".ogg", ".flac", ".aiff"] },
+        { "name": "archives", "accept": [".7z", ".zip", ".rar"] },
+        { "name": "documents", "accept": [".pdf", ".doc", ".docx", ".txt"] },
+        { "name": "html", "accept": [".html"] },
+        { "name": "text", "accept": [".txt"] },
+        { "name": "sheets", "accept": [".xls", ".csv", ".ppt", ".pptx"] }
       ]
     }
   },
+
   "prefer_related_applications": false,
+
   "related_applications": [
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.remotework",
-      "id": "com.remotework"
-    },
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.jenos.jobsitesonline",
-      "id": "com.jenos.jobsitesonline"
-    },
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.umongous.paidviewpoint",
-      "id": "com.umongous.paidviewpoint"
-    },
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.zareklamy",
-      "id": "com.zareklamy"
-    },
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.wework.ondemand",
-      "id": "com.wework.ondemand"
-    }
+    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.remotework", "id": "com.remotework" },
+    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.jenos.jobsitesonline", "id": "com.jenos.jobsitesonline" },
+    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.umongous.paidviewpoint", "id": "com.umongous.paidviewpoint" },
+    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.zareklamy", "id": "com.zareklamy" },
+    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.wework.ondemand", "id": "com.wework.ondemand" }
   ],
+
   "protocol_handlers": [
     {
       "protocol": "web+anywhereincome",
       "url": "/?url=%s"
     }
   ],
+
   "shortcuts": [
     {
       "name": "Top Featured",
@@ -184,8 +134,10 @@
       "description": "Read privacy policy"
     }
   ],
+
   "edge_side_panel": {
     "preferred_width": 400
   },
+
   "iarc_rating_id": "Not Rated"
 }
