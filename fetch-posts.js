@@ -1,15 +1,22 @@
 // fetch-posts.js
 const fetch = require('node-fetch');
 const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 
+// Config
 const BLOG_JSON = 'https://thabogushumani.blogspot.com/feeds/posts/default?alt=json';
-const OUTPUT_DIR = './posts';
+const OUTPUT_DIR = path.join(__dirname, 'posts'); // ensures folder is in repo root
 const BLOG_TITLE = 'Work From Anywhere';
-const MAX_POSTS = 50; // Limit posts per run
+const MAX_POSTS = 50; // maximum posts per run
 
-if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+// Ensure posts folder exists
+if (!fs.existsSync(OUTPUT_DIR)) {
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  console.log('Created folder:', OUTPUT_DIR);
+}
 
+// Helper functions
 function formatDate(dateStr) {
   const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
@@ -19,6 +26,7 @@ function hash(str) {
   return crypto.createHash('sha256').update(str, 'utf8').digest('hex');
 }
 
+// Main async function
 (async () => {
   try {
     const res = await fetch(BLOG_JSON);
@@ -33,8 +41,8 @@ function hash(str) {
     // Limit posts per run
     const postsToProcess = posts.slice(0, MAX_POSTS);
 
-    const currentFiles = fs.existsSync(OUTPUT_DIR) 
-      ? fs.readdirSync(OUTPUT_DIR) 
+    const currentFiles = fs.existsSync(OUTPUT_DIR)
+      ? fs.readdirSync(OUTPUT_DIR)
       : [];
 
     const activeFiles = [];
@@ -62,7 +70,7 @@ ${content}
 </body>
 </html>`;
 
-      const filePath = `${OUTPUT_DIR}/${titleSlug}.html`;
+      const filePath = path.join(OUTPUT_DIR, `${titleSlug}.html`);
       activeFiles.push(`${titleSlug}.html`);
 
       let writeFile = true;
@@ -82,7 +90,7 @@ ${content}
     // Remove files that no longer exist in Blogger
     for (const file of currentFiles) {
       if (!activeFiles.includes(file)) {
-        fs.unlinkSync(`${OUTPUT_DIR}/${file}`);
+        fs.unlinkSync(path.join(OUTPUT_DIR, file));
         console.log('Deleted:', file);
         updated = true;
       }
@@ -91,6 +99,6 @@ ${content}
     if (!updated) console.log('No changes detected');
 
   } catch (err) {
-    console.error(err);
+    console.error('Error fetching or processing posts:', err);
   }
 })();
