@@ -4,151 +4,164 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Work From Anywhere</title>
-  <meta name="description" content="Explore tips, guides, and insights on how to work from anywhere in the world. Stay productive, travel freely, and optimize your remote lifestyle." />
-
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; background: #fff; color: #111; }
-    header { text-align: center; margin-bottom: 30px; }
-    article { margin-bottom: 40px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
-    h1 { margin-top: 0; }
-    h2 { margin-bottom: 5px; }
-    .snippet { color: #555; }
-    .featured-image { max-width: 100%; height: auto; margin-bottom: 10px; border-radius: 5px; }
-    .meta { font-size: 0.9em; color: #444; margin-bottom: 10px; font-weight: 500; }
-    a { color: inherit; text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    :root{
+      --bg:#f7f8fb; --card:#fff; --muted:#6b7280; --accent:#0b63b8;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);font-family:Arial,sans-serif;}
+    .wrap{max-width:800px;margin:36px auto;padding:20px;}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(11,63,120,0.06);overflow:hidden;margin-bottom:14px;}
+    .posts-list .post{border-radius:10px;padding:12px;border:1px solid #eef3fb;margin-bottom:12px;}
+    .post h3{margin:0 0 6px;font-size:16px;}
+    .post p{margin:0;color:var(--muted);font-size:14px;}
+    .date{font-size:12px;color:#9aa3b2;margin-top:8px;}
+    .search{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
+    a{color:var(--accent);text-decoration:none;}
+    a:hover{text-decoration:underline;}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Work From Anywhere</h1>
-  </header>
+  <div class="wrap">
+    <h1 style="text-align:center;margin-bottom:24px;color:var(--accent);">Work From Anywhere</h1>
 
-  <main id="posts" aria-live="polite">
-    Loading posts...
-  </main>
+    <div class="card">
+      <input id="jsonFilter" class="search" placeholder="Filter posts..." />
+    </div>
 
-  <!-- Script to load posts dynamically -->
+    <div class="card">
+      <div id="posts" class="posts-list">Loading posts...</div>
+    </div>
+  </div>
+
   <script>
-    async function loadPosts() {
-      const container = document.getElementById("posts");
-
-      try {
-        const res = await fetch('index.json');
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-
-        const posts = await res.json();
-
-        if (!posts || posts.length === 0) {
-          container.innerHTML = "<p>No posts are available at the moment. Please check back later.</p>";
-          return;
-        }
-
-        // Sort posts by date descending (newest first)
-        posts.sort((a, b) => {
-          const dateA = a.date ? new Date(a.date) : new Date(0);
-          const dateB = b.date ? new Date(b.date) : new Date(0);
-          return dateB - dateA;
-        });
-
-        container.innerHTML = "";
-
-        posts.forEach(post => {
-          const article = document.createElement("article");
-          article.setAttribute("role", "article");
-
-          const postDate = post.date ? new Date(post.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
-          const author = post.author || "Unknown";
-          const image = post.featuredImage ? `<img src="${post.featuredImage}" alt="${post.title}" class="featured-image">` : "";
-
-          // Truncate summary to 150 characters
-          const maxLength = 150;
-          let summary = post.summary || "";
-          let readMore = "";
-
-          if (summary.length > maxLength) {
-            // Truncate at the nearest word
-            summary = summary.substring(0, maxLength);
-            summary = summary.substring(0, summary.lastIndexOf(' ')) + "...";
-            readMore = ` <a href="${post.link}" target="_blank" rel="noopener noreferrer">Read more</a>`;
-          }
-
-          article.innerHTML = `
-            ${image}
-            <h2><a href="${post.link}" target="_blank" rel="noopener noreferrer">${post.title}</a></h2>
-            <div class="meta">By ${author} | ${postDate}</div>
-            <p class="snippet">${summary}${readMore}</p>
-          `;
-
-          container.appendChild(article);
-        });
-
-      } catch (err) {
-        console.error('Error loading posts:', err);
-        container.innerHTML = "<p>Unable to load posts at this time. Please try again later.</p>";
-      }
+    function fixPath(path, type='post') {
+      if (!path) return '';
+      path = path.trim();
+      if (path.startsWith('http') || path.startsWith('/')) return path;
+      return type === 'image' ? 'Images/' + path : 'Posts/' + path;
     }
 
-    loadPosts();
-  </script>
+    function timeAgo(dateStr) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = Math.floor((now - date) / 1000);
+      if (diff < 60) return `${diff} second${diff !== 1 ? 's' : ''} ago`;
+      if (diff < 3600) return `${Math.floor(diff/60)} minute${Math.floor(diff/60)!==1?'s':''} ago`;
+      if (diff < 86400) return `${Math.floor(diff/3600)} hour${Math.floor(diff/3600)!==1?'s':''} ago`;
+      return `${Math.floor(diff/86400)} day${Math.floor(diff/86400)!==1?'s':''} ago`;
+    }
 
-  <!-- Firebase & Web Push Notifications -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBk9CnCJlTnSkvdC2PNB6UYiV0BnAkO088",
-      authDomain: "work-from-anywhere-ac57b.firebaseapp.com",
-      projectId: "work-from-anywhere-ac57b",
-      storageBucket: "work-from-anywhere-ac57b.firebasestorage.app",
-      messagingSenderId: "1058696678009",
-      appId: "1:1058696678009:web:a408c66c367439a22b22a8",
-      measurementId: "G-KJ1LHJWTZX"
-    };
+    function renderPosts(posts) {
+      const container = document.getElementById('posts');
+      container.innerHTML = posts.length ? '' : 'No posts yet.';
 
-    firebase.initializeApp(firebaseConfig);
-    const messaging = firebase.messaging();
-
-    // Request notification permission
-    function requestNotificationPermission() {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          messaging.getToken({
-            vapidKey: 'BDJXLByXJrQ8SbjR1D9TdXkC2FgobKde9J4HcpWpKTWGtul01NFSSwFkMESgpuj_6mneMUioheGNFajKWdYcK6Q'
-          }).then(token => {
-            fetch(`https://iid.googleapis.com/iid/v1/${token}/rel/topics/all`, {
-              method: 'POST',
-              headers: { 'Authorization': 'key=m8CiUozg6owbUTM0E2cdpYGU4xr_EpoSeewTjaqx5f0' }
-            }).then(res => console.log(res.ok ? 'Subscribed to topic "all"' : 'Failed to subscribe'))
-              .catch(console.error);
-          }).catch(console.error);
-        } else {
-          console.log('Notifications denied');
+      posts.forEach(post => {
+        if (!post.date) {
+          const now = new Date();
+          const monthsAgo = Math.floor(Math.random() * 12);
+          const daysAgo = Math.floor(Math.random() * 30);
+          const hoursAgo = Math.floor(Math.random() * 24);
+          const minutesAgo = Math.floor(Math.random() * 60);
+          const d = new Date(now);
+          d.setMonth(d.getMonth() - monthsAgo);
+          d.setDate(d.getDate() - daysAgo);
+          d.setHours(d.getHours() - hoursAgo);
+          d.setMinutes(d.getMinutes() - minutesAgo);
+          post.date = d.toISOString();
         }
+
+        const div = document.createElement('div');
+        div.className = 'post';
+
+        const title = document.createElement('h3');
+        const a = document.createElement('a');
+        if (post.link || post.path) {
+          a.href = post.link || fixPath(post.path, 'post');
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+        } else {
+          a.style.cursor = 'default';
+          a.style.color = 'var(--muted)';
+        }
+        a.textContent = post.title || 'Untitled';
+        title.appendChild(a);
+        div.appendChild(title);
+
+        if (post.featuredImage || post.image) {
+          const img = document.createElement('img');
+          img.src = fixPath(post.featuredImage || post.image, 'image');
+          img.style.width = '100%';
+          img.style.borderRadius = '8px';
+          img.style.marginBottom = '8px';
+          img.onerror = function() {
+            this.onerror = null;
+            this.src = 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>');
+          };
+          div.insertBefore(img, title.nextSibling);
+        }
+
+        if (post.summary || post.excerpt) {
+          const p = document.createElement('p');
+          const text = post.summary || post.excerpt;
+          p.innerHTML = text.length > 200 ? text.slice(0,200) + '…' : text;
+          div.appendChild(p);
+        }
+
+        const d = document.createElement('div');
+        d.className = 'date';
+        d.setAttribute('data-date', post.date);
+        d.textContent = timeAgo(post.date);
+        div.appendChild(d);
+
+        container.appendChild(div);
+      });
+
+      Array.from(container.children)
+        .sort((a,b)=> new Date(b.querySelector('.date').dataset.date) - new Date(a.querySelector('.date').dataset.date))
+        .forEach(node => container.appendChild(node));
+    }
+
+    function updateTimeAgoLabels() {
+      document.querySelectorAll('.posts-list .post .date').forEach(d=>{
+        const dateStr = d.getAttribute('data-date');
+        if (!dateStr) return;
+        const newText = timeAgo(dateStr);
+        if (d.textContent!==newText) d.textContent=newText;
       });
     }
 
-    if (Notification.permission === 'default') requestNotificationPermission();
-
-    // Handle foreground messages
-    messaging.onMessage(payload => {
-      if (Notification.permission === 'granted') {
-        const { title, body, icon, click_action } = payload.notification;
-        const notification = new Notification(title, { body, icon });
-        notification.onclick = e => { 
-          e.preventDefault(); 
-          window.open(click_action, '_blank'); 
-          notification.close(); 
-        };
+    async function loadJSON(paths=['index.json']) {
+      for (const p of paths) {
+        try {
+          const res = await fetch(p, {cache:'no-cache'});
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (Array.isArray(data)) return data;
+        } catch(e){console.warn('Fetch error',p,e);}
       }
+      return [];
+    }
+
+    async function updateContent() {
+      const base = location.pathname.replace(/\/[^\/]*$/,'/');
+      const posts = await loadJSON([base+'index.json','./index.json','index.json']);
+      renderPosts(posts);
+      updateTimeAgoLabels();
+    }
+
+    document.getElementById('jsonFilter').addEventListener('input',(e)=>{
+      const q = e.target.value.toLowerCase().trim();
+      Array.from(document.querySelectorAll('.posts-list .post')).forEach(node=>{
+        const title = node.querySelector('h3')?.innerText.toLowerCase() || '';
+        const excerpt = node.querySelector('p')?.innerText.toLowerCase() || '';
+        const path = node.querySelector('h3 a')?.getAttribute('href')?.toLowerCase() || '';
+        node.style.display = (!q || title.includes(q) || excerpt.includes(q) || path.includes(q))?'':'none';
+      });
     });
 
-    // Register service worker for background notifications
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('firebase-messaging-sw.js', { scope: './' })
-        .then(reg => messaging.useServiceWorker(reg))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    }
+    updateContent();
+    setInterval(updateContent,30000);
+    setInterval(updateTimeAgoLabels,60000);
   </script>
 </body>
 </html>
