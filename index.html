@@ -9,23 +9,22 @@
     :root{
       --bg:#f7f8fb; 
       --card:#fff; 
-      --muted:#4a5568; /* darker muted text for readability */
+      --muted:#4a5568;
       --accent:#0b63b8; 
-      --date:#1f2937; /* high-contrast date text */
+      --date:#1f2937;
     }
     html,body{height:100%;margin:0;background:var(--bg);font-family:Arial,sans-serif;}
     .wrap{max-width:800px;margin:36px auto;padding:20px;}
     .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(11,63,120,0.06);overflow:hidden;margin-bottom:14px;}
     .posts-list .post{border-radius:10px;padding:12px;border:1px solid #eef3fb;margin-bottom:12px;}
-    .posts-list .post h2{margin:0 0 6px;font-size:16px;} /* heading order fixed */
-    .post-text{margin:0;color:var(--muted);font-size:14px;margin-bottom:8px;} /* improved contrast */
-    .date{font-size:12px;color:var(--date);margin-top:8px;} /* improved contrast */
+    .posts-list .post h2{margin:0 0 6px;font-size:16px;}
+    .post-text{margin:0;color:var(--muted);font-size:14px;margin-bottom:8px;}
+    .date{font-size:12px;color:var(--date);margin-top:8px;}
     .search{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
     a{color:var(--accent);text-decoration:none;}
     a:hover{text-decoration:underline;}
     .read-more{display:inline-block;margin-top:6px;color:var(--accent);font-size:14px;}
 
-    /* Skip link styles */
     .skip-link {
       position: absolute;
       top: -40px;
@@ -38,11 +37,7 @@
       text-decoration: none;
       font-size: 14px;
     }
-    .skip-link:focus {
-      top: 8px;
-    }
-
-    /* visually-hidden helper for labels */
+    .skip-link:focus { top: 8px; }
     .sr-only { position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px, 1px, 1px, 1px); white-space:nowrap; }
   </style>
 </head>
@@ -108,7 +103,7 @@
 
         const postTitle = post.title && post.title.trim() ? post.title.trim() : (post.link || post.path ? (post.link || post.path) : 'Untitled');
 
-        // Title (h2 for proper heading order)
+        // Title
         const title = document.createElement('h2');
         const titleHref = post.link || fixPath(post.content_file || post.path, 'post') || '#';
         const titleAnchor = makePostLink(titleHref, postTitle);
@@ -116,18 +111,23 @@
         title.appendChild(titleAnchor);
         div.appendChild(title);
 
-        // Featured Image
+        // Featured Image (responsive)
         if (post.featuredImage || post.image) {
           const img = document.createElement('img');
-          const imgSrc = fixPath(post.featuredImage || post.image, 'image');
-          img.src = imgSrc;
 
-          // Explicit width & height for CLS
-          img.width = 800; // intrinsic width
-          img.height = 450; // intrinsic height
+          const widthDisplay = 543;  // displayed width
+          const heightDisplay = 293; // displayed height
+
+          const originalPath = fixPath(post.featuredImage || post.image, 'image');
+          const smallPath = originalPath.replace(/(\.[a-z]+)$/i, '-543w$1');
+
+          img.src = smallPath; // default
+          img.srcset = `${smallPath} 543w, ${originalPath} 800w`;
+          img.sizes = '(max-width: 600px) 100vw, 543px';
+          img.width = widthDisplay;
+          img.height = heightDisplay;
           img.style.width = '100%';
           img.style.height = 'auto';
-
           img.alt = post.title ? post.title + " – featured image" : "Post featured image";
           img.style.borderRadius = '8px';
           img.style.marginBottom = '8px';
