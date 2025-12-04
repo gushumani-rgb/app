@@ -20,22 +20,55 @@
     a{color:var(--accent);text-decoration:none;}
     a:hover{text-decoration:underline;}
     .read-more{display:inline-block;margin-top:6px;color:var(--accent);font-size:14px;}
+
+    /* Skip link styles (visible on focus) */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 8px;
+      background: #000;
+      color: #fff;
+      padding: 8px 12px;
+      z-index: 1000;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .skip-link:focus {
+      top: 8px;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1 style="text-align:center;margin-bottom:24px;color:var(--accent);">Anywhere Income</h1>
+  <!-- Skip link helps keyboard and screen reader users jump straight to main content -->
+  <a class="skip-link" href="#maincontent">Skip to main content</a>
 
-    <div class="card">
+  <!-- Header landmark -->
+  <header class="wrap" role="banner" aria-label="Site header">
+    <h1 id="site-title" style="text-align:center;margin-bottom:24px;color:var(--accent);">Anywhere Income</h1>
+  </header>
+
+  <!-- Main landmark (one per page) -->
+  <main id="maincontent" role="main" aria-labelledby="site-title" class="wrap" tabindex="-1">
+    <div class="card" role="region" aria-label="Search posts">
+      <label for="jsonFilter" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Filter posts</label>
       <input id="jsonFilter" class="search" placeholder="Filter posts..." />
     </div>
 
-    <div class="card">
+    <div class="card" role="region" aria-label="Posts list">
       <div id="posts" class="posts-list">Loading posts...</div>
     </div>
-  </div>
+  </main>
+
+  <!-- Footer landmark -->
+  <footer class="wrap" role="contentinfo" aria-label="Site footer" style="text-align:center;padding:12px;color:#6b7280;">
+    <small>&copy; <span id="year"></span> Anywhere Income</small>
+  </footer>
 
   <script>
+    // set year in footer
+    document.getElementById('year').textContent = new Date().getFullYear();
+
     function fixPath(path, type='post') {
       if (!path) return '';
       path = path.trim();
