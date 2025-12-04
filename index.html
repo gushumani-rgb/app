@@ -1,99 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json" />
+
+  <!-- Theme color -->
   <meta name="theme-color" content="#ffffff" />
+
+  <!-- iOS support -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+  <!-- Favicon -->
   <link rel="icon" type="image/png" href="/icons/icon-192.png" />
-  <title>Anywhere Income</title>
-  <meta name="description" content="Work from anywhere. Explore tips, guides, and resources to earn from anywhere in the world." />
+
+  <!-- Page title and description -->
+  <title>Work From Anywhere</title>
+  <meta name="description" content="Explore tips, guides, and insights on how to work from anywhere in the world. Stay productive, travel freely, and optimize your remote lifestyle." />
+
+  <!-- Service worker registration -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/service-worker.js");
+        navigator.serviceWorker.register("/service-worker.js")
+          .then(reg => console.log("Service Worker registered", reg))
+          .catch(err => console.error("Service Worker registration failed", err));
       });
     }
   </script>
-  </head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Work From Anywhere</title>
-<meta name="description" content="Explore tips, guides, and insights on how to work from anywhere in the world. Stay productive, travel freely, and optimize your remote lifestyle." />
-<style>
-  body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; background: #ffffff; color: #111; }
-  article { margin-bottom: 40px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
-  h1 { margin-top: 0; }
-  h2 { margin-bottom: 5px; }
-  .snippet { color: #555; }
-  .featured-image { max-width: 100%; height: auto; margin-bottom: 10px; border-radius: 5px; }
-  /* Improved meta contrast and readability */
-  .meta {
-    font-size: 0.9em;
-    color: #444444; /* changed from #888 to #444 for better contrast (WCAG compliant) */
-    margin-bottom: 10px;
-    font-weight: 500;
-  }
-  a { color: inherit; text-decoration: none; }
-  a:hover { text-decoration: underline; }
-</style>
+
+  <!-- CSS -->
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; background: #ffffff; color: #111; }
+    header { text-align: center; margin-bottom: 30px; }
+    article { margin-bottom: 40px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
+    h1 { margin-top: 0; }
+    h2 { margin-bottom: 5px; }
+    .snippet { color: #555; }
+    .featured-image { max-width: 100%; height: auto; margin-bottom: 10px; border-radius: 5px; }
+    .meta { font-size: 0.9em; color: #444; margin-bottom: 10px; font-weight: 500; }
+    a { color: inherit; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-<header>
-  <h1>Work From Anywhere</h1>
-</header>
+  <header>
+    <h1>Work From Anywhere</h1>
+  </header>
 
-<main id="posts" aria-live="polite">Loading posts...</main>
+  <main id="posts" aria-live="polite">
+    Loading posts...
+  </main>
 
-<script>
-function displayPosts(data) {
-  const container = document.getElementById("posts");
-  const entries = data.feed.entry || [];
+  <script>
+    function displayPosts(data) {
+      const container = document.getElementById("posts");
+      const entries = data.feed.entry || [];
 
-  if (!entries.length) {
-    container.innerHTML = "No posts found.";
-    return;
-  }
+      if (!entries.length) {
+        container.innerHTML = "No posts found.";
+        return;
+      }
 
-  container.innerHTML = "";
-  entries.forEach(entry => {
-    const title = entry.title.$t;
-    const link = entry.link.find(l => l.rel === "alternate").href;
+      container.innerHTML = "";
+      entries.forEach(entry => {
+        const title = entry.title.$t;
+        const link = entry.link.find(l => l.rel === "alternate").href;
 
-    // Snippet
-    let snippet = entry.content ? entry.content.$t : entry.summary?.$t || "";
-    snippet = snippet.replace(/<[^>]*>?/gm, ""); // remove HTML tags
-    snippet = snippet.substring(0, 200) + (snippet.length > 200 ? "..." : "");
+        // Snippet
+        let snippet = entry.content ? entry.content.$t : entry.summary?.$t || "";
+        snippet = snippet.replace(/<[^>]*>?/gm, "");
+        snippet = snippet.substring(0, 200) + (snippet.length > 200 ? "..." : "");
 
-    // Featured image
-    let featuredImage = "";
-    if (entry.media$thumbnail) {
-      featuredImage = entry.media$thumbnail.url.replace(/\/s72-c\//, "/s600/"); // bigger image
+        // Featured image
+        let featuredImage = "";
+        if (entry.media$thumbnail) {
+          featuredImage = entry.media$thumbnail.url.replace(/\/s72-c\//, "/s600/");
+        }
+
+        // Author
+        const author = entry.author?.[0]?.name?.$t || "Unknown";
+
+        // Published date
+        const published = entry.published ? new Date(entry.published.$t).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "";
+
+        const article = document.createElement("article");
+        article.setAttribute("role", "article");
+        article.innerHTML = `
+          ${featuredImage ? `<img src="${featuredImage}" alt="${title}" class="featured-image">` : ""}
+          <h2><a href="${link}" target="_blank" rel="noopener noreferrer">${title}</a></h2>
+          <div class="meta" aria-label="author and published date">By ${author} | ${published}</div>
+          <p class="snippet">${snippet}</p>
+        `;
+        container.appendChild(article);
+      });
     }
 
-    // Author
-    const author = entry.author?.[0]?.name?.$t || "Unknown";
-
-    // Published date
-    const published = entry.published ? new Date(entry.published.$t).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "";
-
-    const article = document.createElement("article");
-    article.setAttribute("role", "article");
-    article.innerHTML = `
-      ${featuredImage ? `<img src="${featuredImage}" alt="${title}" class="featured-image">` : ""}
-      <h2><a href="${link}" target="_blank" rel="noopener noreferrer">${title}</a></h2>
-      <div class="meta" aria-label="author and published date">By ${author} | ${published}</div>
-      <p class="snippet">${snippet}</p>
-    `;
-    container.appendChild(article);
-  });
-}
-
-// Fetch posts from Blogger
-const script = document.createElement("script");
-script.src = "https://thabogushumani.blogspot.com/feeds/posts/default?alt=json-in-script&callback=displayPosts&max-results=100";
-document.body.appendChild(script);
-</script>
+    // Fetch Blogger posts
+    const script = document.createElement("script");
+    script.src = "https://thabogushumani.blogspot.com/feeds/posts/default?alt=json-in-script&callback=displayPosts&max-results=100";
+    document.body.appendChild(script);
+  </script>
 </body>
 </html>
