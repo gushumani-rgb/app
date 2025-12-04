@@ -13,7 +13,7 @@
     .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(11,63,120,0.06);overflow:hidden;margin-bottom:14px;}
     .posts-list .post{border-radius:10px;padding:12px;border:1px solid #eef3fb;margin-bottom:12px;}
     .post h3{margin:0 0 6px;font-size:16px;}
-    .post p{margin:0;color:var(--muted);font-size:14px;}
+    .post-text{margin:0;color:var(--muted);font-size:14px;}
     .date{font-size:12px;color:#9aa3b2;margin-top:8px;}
     .search{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
     a{color:var(--accent);text-decoration:none;}
@@ -56,33 +56,14 @@
       container.innerHTML = posts.length ? '' : 'No posts yet.';
 
       posts.forEach(post => {
-        if (!post.date) {
-          const now = new Date();
-          const monthsAgo = Math.floor(Math.random() * 12);
-          const daysAgo = Math.floor(Math.random() * 30);
-          const hoursAgo = Math.floor(Math.random() * 24);
-          const minutesAgo = Math.floor(Math.random() * 60);
-          const d = new Date(now);
-          d.setMonth(d.getMonth() - monthsAgo);
-          d.setDate(d.getDate() - daysAgo);
-          d.setHours(d.getHours() - hoursAgo);
-          d.setMinutes(d.getMinutes() - minutesAgo);
-          post.date = d.toISOString();
-        }
-
         const div = document.createElement('div');
         div.className = 'post';
 
         const title = document.createElement('h3');
         const a = document.createElement('a');
-        if (post.link || post.path) {
-          a.href = post.link || fixPath(post.path, 'post');
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-        } else {
-          a.style.cursor = 'default';
-          a.style.color = 'var(--muted)';
-        }
+        a.href = post.link || fixPath(post.content_file || post.path, 'post');
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
         a.textContent = post.title || 'Untitled';
         title.appendChild(a);
         div.appendChild(title);
@@ -102,6 +83,7 @@
 
         if (post.summary || post.excerpt) {
           const p = document.createElement('p');
+          p.className = 'post-text';  // ✅ all paragraphs get this class
           const text = post.summary || post.excerpt;
           p.innerHTML = text.length > 200 ? text.slice(0,200) + '…' : text;
           div.appendChild(p);
@@ -110,7 +92,7 @@
         const d = document.createElement('div');
         d.className = 'date';
         d.setAttribute('data-date', post.date);
-        d.textContent = timeAgo(post.date);
+        d.textContent = post.date ? timeAgo(post.date) : '';
         div.appendChild(d);
 
         container.appendChild(div);
@@ -125,26 +107,24 @@
       document.querySelectorAll('.posts-list .post .date').forEach(d=>{
         const dateStr = d.getAttribute('data-date');
         if (!dateStr) return;
-        const newText = timeAgo(dateStr);
-        if (d.textContent!==newText) d.textContent=newText;
+        d.textContent = timeAgo(dateStr);
       });
     }
 
-    async function loadJSON(paths=['index.json']) {
-      for (const p of paths) {
-        try {
-          const res = await fetch(p, {cache:'no-cache'});
-          if (!res.ok) continue;
-          const data = await res.json();
-          if (Array.isArray(data)) return data;
-        } catch(e){console.warn('Fetch error',p,e);}
+    async function loadPosts() {
+      try {
+        const res = await fetch('index.json', {cache:'no-cache'});
+        if (!res.ok) throw new Error('Failed to fetch index.json');
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
+      } catch(e){
+        console.warn('Error loading posts:', e);
+        return [];
       }
-      return [];
     }
 
     async function updateContent() {
-      const base = location.pathname.replace(/\/[^\/]*$/,'/');
-      const posts = await loadJSON([base+'index.json','./index.json','index.json']);
+      const posts = await loadPosts();
       renderPosts(posts);
       updateTimeAgoLabels();
     }
