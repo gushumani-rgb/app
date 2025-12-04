@@ -1,0 +1,5 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://app-a24.pages.dev/sitemap.xml
+Host: app-a24.pages.dev
