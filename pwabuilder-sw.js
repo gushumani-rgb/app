@@ -1,49 +1,50 @@
-const CACHE = "offline-cache-v1";
-const OFFLINE_URL = "/offline.html";
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) =>
-      cache.addAll([
-        OFFLINE_URL,
-        "/manifest.json",
-        "/icons/icon-192.png",
-        "/icons/icon-512.png"
-      ])
-    )
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener("fetch", (event) => {
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request).catch(async () => {
-        const cache = await caches.open(CACHE);
-        return cache.match(OFFLINE_URL);
-      })
-    );
+// Ask user permission for notifications
+Notification.requestPermission().then(permission => {
+  if (permission === 'granted') {
+    console.log('Notification permission granted.');
+  } else {
+    console.log('Notification permission denied.');
   }
 });
 
-// Push notifications
-self.addEventListener("push", (event) => {
-  const data = event.data ? event.data.json() : {};
-  event.waitUntil(
-    self.registration.showNotification(data.title || "Anywhere Income", {
-      body: data.body || "You have a new notification",
-      icon: data.icon || "/icons/icon-192.png",
-      data: { path: data.path || "/" }
-    })
-  );
+// Listen for push events
+self.addEventListener('push', (event) => {
+  let data = {};
+  if (event.data) {
+    data = event.data.json();
+  }
+
+  const title = data.title || 'Notification Title';
+  const options = {
+    body: data.body || 'Notification Body Text',
+    icon: data.icon || 'custom-notification-icon.png',
+    data: {
+      path: data.path || '/', // path to open on click
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
-self.addEventListener("notificationclick", (event) => {
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const path = event.notification.data?.path || "/";
-  event.waitUntil(clients.openWindow(self.location.origin + path));
+  const notificationData = event.notification.data;
+
+  const urlToOpen = new URL(notificationData.path, self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // If a window is already open, focus it
+      for (const client of windowClients) {
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
 });
