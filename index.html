@@ -28,8 +28,8 @@
     Loading posts...
   </main>
 
+  <!-- Script to load posts dynamically -->
   <script>
-    // Dynamically load posts from index.json
     async function loadPosts() {
       const container = document.getElementById("posts");
 
@@ -44,18 +44,45 @@
           return;
         }
 
+        // Sort posts by date descending (newest first)
+        posts.sort((a, b) => {
+          const dateA = a.date ? new Date(a.date) : new Date(0);
+          const dateB = b.date ? new Date(b.date) : new Date(0);
+          return dateB - dateA;
+        });
+
         container.innerHTML = "";
+
         posts.forEach(post => {
           const article = document.createElement("article");
           article.setAttribute("role", "article");
+
+          const postDate = post.date ? new Date(post.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+          const author = post.author || "Unknown";
+          const image = post.featuredImage ? `<img src="${post.featuredImage}" alt="${post.title}" class="featured-image">` : "";
+
+          // Truncate summary to 150 characters
+          const maxLength = 150;
+          let summary = post.summary || "";
+          let readMore = "";
+
+          if (summary.length > maxLength) {
+            // Truncate at the nearest word
+            summary = summary.substring(0, maxLength);
+            summary = summary.substring(0, summary.lastIndexOf(' ')) + "...";
+            readMore = ` <a href="${post.link}" target="_blank" rel="noopener noreferrer">Read more</a>`;
+          }
+
           article.innerHTML = `
-            ${post.featuredImage ? `<img src="${post.featuredImage}" alt="${post.title}" class="featured-image">` : ""}
+            ${image}
             <h2><a href="${post.link}" target="_blank" rel="noopener noreferrer">${post.title}</a></h2>
-            <div class="meta">By ${post.author || "Unknown"} | ${post.date ? new Date(post.date).toLocaleDateString() : ""}</div>
-            <p class="snippet">${post.summary || ""}</p>
+            <div class="meta">By ${author} | ${postDate}</div>
+            <p class="snippet">${summary}${readMore}</p>
           `;
+
           container.appendChild(article);
         });
+
       } catch (err) {
         console.error('Error loading posts:', err);
         container.innerHTML = "<p>Unable to load posts at this time. Please try again later.</p>";
@@ -108,7 +135,11 @@
       if (Notification.permission === 'granted') {
         const { title, body, icon, click_action } = payload.notification;
         const notification = new Notification(title, { body, icon });
-        notification.onclick = e => { e.preventDefault(); window.open(click_action, '_blank'); notification.close(); };
+        notification.onclick = e => { 
+          e.preventDefault(); 
+          window.open(click_action, '_blank'); 
+          notification.close(); 
+        };
       }
     });
 
