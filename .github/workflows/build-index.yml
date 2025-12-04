@@ -75,14 +75,14 @@ jobs:
                       meta = {}
                       body = text
 
-                      # File modified time as fallback
+                      # File modified time fallback
                       try:
                           mtime_ts = p.stat().st_mtime
                           mtime_dt = datetime.fromtimestamp(mtime_ts, tz=TZ_OFFSET)
                       except Exception:
                           mtime_dt = datetime.now(TZ_OFFSET)
 
-                      # Parse meta/front-matter
+                      # Parse front matter
                       if p.suffix.lower() in ('.md', '.markdown'):
                           fm, body = parse_front_matter(text)
                           if fm:
@@ -106,6 +106,19 @@ jobs:
                           soup2 = BeautifulSoup(body, 'html.parser')
                           ptag = soup2.find('p')
                           meta['excerpt'] = ptag.get_text(strip=True)[:300] if ptag else ''
+
+                      # --- Featured / Image ---
+                      meta['featuredImage'] = None
+                      meta['image'] = None
+                      if 'featuredImage' in meta and meta['featuredImage']:
+                          meta['featuredImage'] = meta['featuredImage'].strip()
+                          meta['image'] = meta['featuredImage']  # mirror for compatibility
+                      else:
+                          soup2 = BeautifulSoup(body, 'html.parser')
+                          img_tag = soup2.find('img')
+                          if img_tag and img_tag.get('src'):
+                              meta['featuredImage'] = img_tag['src'].strip()
+                              meta['image'] = meta['featuredImage']
 
                       # Tags and categories
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
@@ -135,8 +148,6 @@ jobs:
 
                       # --- Date parsing ---
                       dt_obj = None
-
-                      # 1️⃣ Meta date
                       if 'date' in meta and meta['date']:
                           try:
                               parsed = dateparser.parse(str(meta['date']))
@@ -147,7 +158,6 @@ jobs:
                           except Exception:
                               dt_obj = None
 
-                      # 2️⃣ <p class="post-date">
                       if not dt_obj:
                           soup_date = BeautifulSoup(body, 'html.parser')
                           pdate = soup_date.find('p', class_='post-date')
@@ -161,7 +171,6 @@ jobs:
                               except Exception:
                                   dt_obj = None
 
-                      # 3️⃣ Fallback: file modified time
                       if not dt_obj:
                           dt_obj = mtime_dt
 
@@ -174,13 +183,15 @@ jobs:
                           'tags': tags,
                           'categories': categories,
                           'reading_time': reading_time,
-                          'word_count': words
+                          'word_count': words,
+                          'featuredImage': meta.get('featuredImage'),
+                          'image': meta.get('image')  # backward compatible
                       })
 
           if not posts:
               posts = [{"title": "No posts yet", "excerpt": "", "path": "/", "source": ""}]
 
-          # Sort posts by timestamp (latest on top)
+          # Sort posts by date descending
           def sort_key(item):
               try:
                   return dateparser.parse(item.get('date')).timestamp()
@@ -188,7 +199,6 @@ jobs:
                   return 0
 
           posts_sorted = sorted(posts, key=sort_key, reverse=True)
-
           index_path.write_text(json.dumps(posts_sorted, indent=2, ensure_ascii=False), encoding='utf-8')
           print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
           PY
