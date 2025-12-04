@@ -13,7 +13,7 @@
     .wrap{max-width:800px;margin:36px auto;padding:20px;}
     .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(11,63,120,0.06);overflow:hidden;margin-bottom:14px;}
     .posts-list .post{border-radius:10px;padding:12px;border:1px solid #eef3fb;margin-bottom:12px;}
-    .post h3{margin:0 0 6px;font-size:16px;}
+    .posts-list .post h2{margin:0 0 6px;font-size:16px;} /* updated for h2 */
     .post-text{margin:0;color:var(--muted);font-size:14px;margin-bottom:8px;}
     .date{font-size:12px;color:#9aa3b2;margin-top:8px;}
     .search{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
@@ -43,7 +43,7 @@
   </style>
 </head>
 <body>
-  <!-- Skip link helps keyboard and screen reader users jump straight to main content -->
+  <!-- Skip link -->
   <a class="skip-link" href="#maincontent">Skip to main content</a>
 
   <!-- Header landmark -->
@@ -51,7 +51,7 @@
     <h1 id="site-title" style="text-align:center;margin-bottom:24px;color:var(--accent);">Anywhere Income</h1>
   </header>
 
-  <!-- Main landmark (one per page) -->
+  <!-- Main landmark -->
   <main id="maincontent" role="main" aria-labelledby="site-title" class="wrap" tabindex="-1">
     <div class="card" role="region" aria-label="Search posts">
       <label for="jsonFilter" class="sr-only">Filter posts</label>
@@ -69,7 +69,6 @@
   </footer>
 
   <script>
-    // set year in footer
     document.getElementById('year').textContent = new Date().getFullYear();
 
     function fixPath(path, type='post') {
@@ -90,7 +89,6 @@
     }
 
     function makePostLink(href, titleText) {
-      // returns an anchor element that opens in a new tab with a descriptive aria-label
       const a = document.createElement('a');
       a.href = href;
       a.target = '_blank';
@@ -110,15 +108,15 @@
 
         const postTitle = post.title && post.title.trim() ? post.title.trim() : (post.link || post.path ? (post.link || post.path) : 'Untitled');
 
-        // Title (link)
-        const title = document.createElement('h3');
+        // Title (link) — now h2 for proper heading order
+        const title = document.createElement('h2');
         const titleHref = post.link || fixPath(post.content_file || post.path, 'post') || '#';
         const titleAnchor = makePostLink(titleHref, postTitle);
         titleAnchor.textContent = post.title || 'Untitled';
         title.appendChild(titleAnchor);
         div.appendChild(title);
 
-        // Featured Image (with alt text) — now wrapped in the title link for context
+        // Featured Image
         if (post.featuredImage || post.image) {
           const img = document.createElement('img');
           const imgSrc = fixPath(post.featuredImage || post.image, 'image');
@@ -139,10 +137,8 @@
             this.alt = "no image available";
           };
 
-          // Wrap image with a descriptive link so the image link has an accessible name via alt
           const imgLink = makePostLink(titleHref, postTitle);
           imgLink.appendChild(img);
-          // put image after the title
           div.insertBefore(imgLink, title.nextSibling);
         }
 
@@ -155,17 +151,13 @@
 
           if(text.length > maxLength){
             p.textContent = text.slice(0, maxLength) + '… ';
-
             const readMore = makePostLink(titleHref, postTitle);
-            // Descriptive link text for context
-            const readMoreText = `Read more about "${postTitle}"`;
-            readMore.textContent = readMoreText;
+            readMore.textContent = `Read more about "${postTitle}"`;
             readMore.className = 'read-more';
             readMore.setAttribute('aria-label', `Read more about ${postTitle}`);
             p.appendChild(readMore);
           } else {
             p.textContent = text;
-            // if content is short we can still provide a descriptive link to the full post
             const readMore = makePostLink(titleHref, postTitle);
             readMore.textContent = `Open full post: "${postTitle}"`;
             readMore.className = 'read-more';
@@ -177,7 +169,6 @@
 
           div.appendChild(p);
         } else {
-          // No excerpt — provide a clear link to the post so the entry isn't linkless
           const direct = makePostLink(titleHref, postTitle);
           direct.textContent = `Open post: "${postTitle}"`;
           direct.className = 'read-more';
@@ -230,9 +221,9 @@
     document.getElementById('jsonFilter').addEventListener('input',(e)=>{
       const q = e.target.value.toLowerCase().trim();
       Array.from(document.querySelectorAll('.posts-list .post')).forEach(node=>{
-        const title = node.querySelector('h3')?.innerText.toLowerCase() || '';
+        const title = node.querySelector('h2')?.innerText.toLowerCase() || '';
         const excerpt = node.querySelector('p')?.innerText.toLowerCase() || '';
-        const path = node.querySelector('h3 a')?.getAttribute('href')?.toLowerCase() || '';
+        const path = node.querySelector('h2 a')?.getAttribute('href')?.toLowerCase() || '';
         node.style.display = (!q || title.includes(q) || excerpt.includes(q) || path.includes(q))?'':'none';
       });
     });
