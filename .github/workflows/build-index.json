@@ -1,4 +1,4 @@
-name: Build index & images JSON
+name: Build index JSON
 
 on:
   push:
@@ -7,10 +7,8 @@ on:
   workflow_dispatch:
 
 env:
-  POSTS_DIR: Posts
-  IMAGES_DIR: Images
+  POSTS_DIR: posts
   INDEX_PATH: index.json
-  IMAGES_JSON_PATH: images.json
 
 permissions:
   contents: write
@@ -34,7 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install beautifulsoup4 pyyaml python-dateutil pytz
 
-      - name: Build index.json and images.json
+      - name: Build index.json
         run: |
           python - <<'PY'
           import os, json, re
@@ -47,10 +45,8 @@ jobs:
           TZ_OFFSET = timezone(timedelta(hours=2))  # UTC+2
 
           root = Path.cwd()
-          posts_root = root / os.environ.get("POSTS_DIR", "Posts")
-          images_root = root / os.environ.get("IMAGES_DIR", "Images")
+          posts_root = root / os.environ.get("POSTS_DIR", "posts")
           index_path = root / os.environ.get("INDEX_PATH", "index.json")
-          images_json_path = root / os.environ.get("IMAGES_JSON_PATH", "images.json")
 
           def read_file(p):
               try:
@@ -71,15 +67,6 @@ jobs:
               return {}, text
 
           posts = []
-          images_seen = {}
-
-          def add_image(src, source_file):
-              if not src:
-                  return
-              src = src.strip()
-              images_seen[src] = images_seen.get(src) or {'src': src, 'source_files': []}
-              if source_file and source_file not in images_seen[src]['source_files']:
-                  images_seen[src]['source_files'].append(source_file)
 
           if posts_root.exists():
               for p in sorted(posts_root.rglob('*')):
@@ -107,9 +94,6 @@ jobs:
                           desc = soup.find('meta', attrs={'name':'description'}) or soup.find('meta', attrs={'property':'og:description'})
                           if desc and desc.get('content'):
                               meta['excerpt'] = desc['content'].strip()
-                          img = soup.find('meta', attrs={'name':'image'}) or soup.find('meta', attrs={'property':'og:image'})
-                          if img and img.get('content'):
-                              meta['image'] = img['content'].strip()
                           kw = soup.find('meta', attrs={'name':'keywords'})
                           if kw and kw.get('content'):
                               meta.setdefault('tags', [t.strip() for t in kw['content'].split(',') if t.strip()])
@@ -122,26 +106,6 @@ jobs:
                           soup2 = BeautifulSoup(body, 'html.parser')
                           ptag = soup2.find('p')
                           meta['excerpt'] = ptag.get_text(strip=True)[:300] if ptag else ''
-
-                      if not meta.get('image'):
-                          soup3 = BeautifulSoup(body, 'html.parser')
-                          img_tag = soup3.find('img')
-                          if img_tag and img_tag.get('src'):
-                              meta['image'] = img_tag.get('src').strip()
-                          else:
-                              meta['image'] = None
-
-                      # Collect images for gallery
-                      soup_imgs = BeautifulSoup(body, 'html.parser')
-                      for it in soup_imgs.find_all('img'):
-                          src = it.get('src')
-                          if src:
-                              add_image(src, p.relative_to(root).as_posix())
-                      soup_meta = BeautifulSoup(body, 'html.parser')
-                      for meta_img in soup_meta.find_all('meta'):
-                          if meta_img.get('property') in ('og:image',) or meta_img.get('name') in ('image',):
-                              if meta_img.get('content'):
-                                  add_image(meta_img.get('content'), p.relative_to(root).as_posix())
 
                       # Tags and categories
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
@@ -201,13 +165,10 @@ jobs:
                       if not dt_obj:
                           dt_obj = mtime_dt
 
-                      # store numeric timestamp for sorting
                       posts.append({
                           'title': meta.get('title'),
                           'date': dt_obj.isoformat(),
-                          'date_ts': dt_obj.timestamp(),
                           'excerpt': meta.get('excerpt', ''),
-                          'image': meta.get('image'),
                           'path': slug,
                           'source': rel,
                           'tags': tags,
@@ -216,40 +177,26 @@ jobs:
                           'word_count': words
                       })
 
-          # Images folder
-          if images_root.exists():
-              for p in sorted(images_root.rglob('*')):
-                  if p.is_file() and p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'):
-                      rel = p.relative_to(root).as_posix()
-                      add_image('/' + rel, rel)
-
           if not posts:
               posts = [{"title": "No posts yet", "excerpt": "", "path": "/", "source": ""}]
 
           # Sort posts by timestamp (latest on top)
           def sort_key(item):
-              ts = item.get('date_ts')
-              if ts is not None:
-                  return ts
-              return datetime.min.replace(tzinfo=TZ_OFFSET).timestamp()
+              try:
+                  return dateparser.parse(item.get('date')).timestamp()
+              except:
+                  return 0
 
           posts_sorted = sorted(posts, key=sort_key, reverse=True)
 
-          for p in posts_sorted:
-              p.pop('date_ts', None)  # clean up internal field
-
-          images_list = [{'src': v['src'], 'source_files': v['source_files']} for v in images_seen.values()]
-
           index_path.write_text(json.dumps(posts_sorted, indent=2, ensure_ascii=False), encoding='utf-8')
-          images_json_path.write_text(json.dumps(images_list, indent=2, ensure_ascii=False), encoding='utf-8')
           print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
-          print(f"Written {images_json_path} with {len(images_list)} images.")
           PY
 
       - name: Commit and push JSON
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add index.json images.json
-          git commit -m "Update index.json and images.json [skip ci]" || echo "Nothing to commit"
+          git add index.json
+          git commit -m "Update index.json [skip ci]" || echo "Nothing to commit"
           git push origin main
