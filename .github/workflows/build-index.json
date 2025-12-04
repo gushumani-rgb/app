@@ -1,4 +1,4 @@
-name: Build index.json
+name: Build index JSON from blogger.json
 
 on:
   push:
@@ -6,46 +6,86 @@ on:
       - main
   workflow_dispatch:
 
-jobs:
-  build-index:
-    runs-on: ubuntu-latest
+env:
+  POSTS_DIR: Posts
+  INDEX_PATH: index.json
 
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/checkout@v4
         with:
-          node-version: '20'
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Generate index.json
-        run: node scripts/generate-index.js
-
-      - name: Check if index.json is non-empty
-        id: check-empty
         run: |
-          FILE="index.json"
-          if [ ! -s "$FILE" ]; then
-            echo "empty=true" >> $GITHUB_OUTPUT
-          else
-            echo "empty=false" >> $GITHUB_OUTPUT
-          fi
+          python -m pip install --upgrade pip
+          pip install python-dateutil pytz
 
-      - name: Check for changes
-        id: git-check
-        if: steps.check-empty.outputs.empty == 'false'
+      - name: Build index.json
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          python - <<'PY'
+          import os, json, re
+          from pathlib import Path
+          from datetime import datetime, timezone, timedelta
+          from dateutil import parser as dateparser
+
+          TZ_OFFSET = timezone(timedelta(hours=2))  # UTC+2
+          root = Path.cwd()
+          posts_root = root / os.environ.get("POSTS_DIR", "Posts")
+          index_path = root / os.environ.get("INDEX_PATH", "index.json")
+
+          posts = []
+
+          if posts_root.exists():
+              for p in sorted(posts_root.rglob('*')):
+                  if p.is_file():
+                      text = p.read_text(encoding='utf-8', errors='ignore')
+
+                      # Handle blogger.json specifically
+                      if p.name.lower() == 'blogger.json' and p.suffix.lower() == '.json':
+                          try:
+                              data = json.loads(text)
+                              for item in data.get('items', []):
+                                  content = item.get('content', '') or item.get('summary', '')
+                                  words = len(re.findall(r'\w+', content))
+                                  reading_time = max(1, words // 200)
+                                  posts.append({
+                                      'title': item.get('title', 'No Title'),
+                                      'date': item.get('published', datetime.now(TZ_OFFSET).isoformat()),
+                                      'excerpt': content[:300],
+                                      'path': '/' + item.get('id', 'post') + '/',
+                                      'source': p.relative_to(root).as_posix(),
+                                      'tags': item.get('labels', []),
+                                      'categories': [],
+                                      'reading_time': reading_time,
+                                      'word_count': words
+                                  })
+                          except Exception:
+                              continue
+
+          if not posts:
+              posts = [{"title": "No posts yet", "excerpt": "", "path": "/", "source": ""}]
+
+          posts_sorted = sorted(posts, key=lambda x: x.get('date', ''), reverse=True)
+          index_path.write_text(json.dumps(posts_sorted, indent=2, ensure_ascii=False), encoding='utf-8')
+          print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
+          PY
+
+      - name: Commit and push JSON
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
           git add index.json
-          git diff --cached --quiet || echo "changes" >> $GITHUB_OUTPUT
-
-      - name: Commit and push index.json if changed
-        if: steps.check-empty.outputs.empty == 'false' && steps.git-check.outputs.changes == 'changes'
-        run: |
-          git commit -m "Update index.json [skip ci]"
-          git push
+          git commit -m "Update index.json [skip ci]" || echo "Nothing to commit"
+          git push origin main
