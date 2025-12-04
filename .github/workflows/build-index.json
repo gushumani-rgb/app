@@ -25,6 +25,9 @@ jobs:
       - name: Generate index.json
         run: node scripts/generate-index.js
 
+      - name: List files for debug
+        run: ls -la
+
       - name: Commit and push index.json
         run: |
           git config --local user.email "action@github.com"
