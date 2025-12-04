@@ -1,37 +1,54 @@
-const CACHE_NAME = 'cool-cache';
+// -----------------------------
+// Service Worker: Offline + Push Notifications
+// -----------------------------
 
-// Add whichever assets you want to precache here:
-const PRECACHE_ASSETS = [
-    '/assets/',
-    '/src/'
-]
+// Cache name for offline pages
+const CACHE = "pwabuilder-offline";
 
-// Listener for the install event - precaches our assets list on service worker install.
-self.addEventListener('install', event => {
-    event.waitUntil((async () => {
-        const cache = await caches.open(CACHE_NAME);
-        cache.addAll(PRECACHE_ASSETS);
-    })());
+// Load Workbox from Google CDN
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
+
+// -----------------------------
+// Offline caching
+// -----------------------------
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
+// Cache all pages using Stale-While-Revalidate
+workbox.routing.registerRoute(
+  new RegExp('.*'), // Matches all requests
+  new workbox.strategies.StaleWhileRevalidate({
+    cacheName: CACHE
+  })
+);
+
+// -----------------------------
+// Push notifications
+// -----------------------------
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Notification Title', {
+      body: data.body || 'Notification Body Text',
+      icon: data.icon || '/custom-notification-icon.png',
+      data: {
+        path: data.path || '/' // URL to open on click
+      }
+    })
+  );
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(async () => {
-      const cache = await caches.open(CACHE_NAME);
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
 
-      // match the request to our cache
-      const cachedResponse = await cache.match(event.request);
+  const path = event.notification.data?.path || '/';
+  const fullPath = self.location.origin + path;
 
-      // check if we got a valid response
-      if (cachedResponse !== undefined) {
-          // Cache hit, return the resource
-          return cachedResponse;
-      } else {
-        // Otherwise, go to the network
-          return fetch(event.request)
-      };
-  });
+  event.waitUntil(
+    clients.openWindow(fullPath)
+  );
 });
