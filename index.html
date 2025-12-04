@@ -1,70 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Work From Anywhere</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
-    article { margin-bottom: 40px; }
-    h2 { margin-bottom: 5px; }
-    hr { margin: 15px 0; }
-    p.meta { font-size: 0.9em; color: #555; }
-    button { display: block; margin: 20px auto; padding: 10px 20px; font-size: 1em; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Work From Anywhere</title>
+
+<style>
+  body { 
+    font-family: Arial, sans-serif; 
+    padding: 20px; 
+    max-width: 800px; 
+    margin: auto; 
+  }
+
+  article { 
+    margin-bottom: 40px; 
+  }
+
+  h2 { 
+    margin-bottom: 5px; 
+  }
+
+  hr { 
+    margin: 15px 0; 
+  }
+
+  p.meta { 
+    font-size: 0.9em; 
+    color: #555; 
+  }
+
+  img {
+    border-radius: 6px;
+  }
+</style>
 </head>
+
 <body>
 
 <h1>Work From Anywhere</h1>
-<p>Total posts: <span id="total-posts">0</span></p>
+
+<p id="post-count">Loading posts...</p>
+
+<!-- Container for dynamic posts -->
 <div id="posts"></div>
-<button id="load-more">Load More</button>
 
 <script>
-  const POSTS_PER_PAGE = 5; // Number of posts to show at once
-  let postsData = [];
-  let currentIndex = 0;
+/* CONFIG */
+const BLOG_JSON = 'https://thabogushumani.blogspot.com/feeds/posts/default?alt=json&max-results=50';
+const MAX_POSTS = 50;
+const POSTS_CONTAINER_ID = 'posts';
+const POST_COUNT_ID = 'post-count';
 
-  const postsContainer = document.getElementById('posts');
-  const totalPostsEl = document.getElementById('total-posts');
-  const loadMoreBtn = document.getElementById('load-more');
+/* Helpers */
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html || '';
+  return tmp.textContent || tmp.innerText || '';
+}
 
-  // Fetch JSON from GitHub Pages
-  fetch('index.json')
-    .then(res => res.json())
-    .then(posts => {
-      postsData = posts;
-      totalPostsEl.textContent = posts.length;
-      renderPosts();
-    })
-    .catch(err => {
-      console.error('Failed to load posts:', err);
-      postsContainer.innerHTML = '<p style="color:red;">Failed to load posts.</p>';
-      loadMoreBtn.style.display = 'none';
-    });
+function formatDate(bloggerDate) {
+  try {
+    const d = new Date(bloggerDate);
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch (e) {
+    return bloggerDate;
+  }
+}
 
-  function renderPosts() {
-    const end = Math.min(currentIndex + POSTS_PER_PAGE, postsData.length);
-    for (let i = currentIndex; i < end; i++) {
-      const p = postsData[i];
-      const article = document.createElement('article');
-      article.innerHTML = `
-        <h2>${p.title}</h2>
-        <p class="meta"><strong>Author:</strong> ${p.author} | <strong>Published:</strong> ${p.published}</p>
-        <hr>
-        ${p.content}
-      `;
-      postsContainer.appendChild(article);
+function findFeaturedImage(entry) {
+  try {
+    if (entry.media$thumbnail && entry.media$thumbnail.url) {
+      return entry.media$thumbnail.url.replace(/s72-c/, 's640');
     }
-    currentIndex = end;
+  } catch (_) {}
 
-    // Hide button if all posts are loaded
-    if (currentIndex >= postsData.length) {
-      loadMoreBtn.style.display = 'none';
+  try {
+    const content = entry.content && entry.content.$t;
+    if (content) {
+      const m = content.match(/<img[^>]+src=['"]([^'"]+)['"]/i);
+      if (m && m[1]) return m[1];
     }
+  } catch (_) {}
+
+  return null;
+}
+
+function getAlternateLink(entry) {
+  if (!entry.link) return '#';
+  for (const l of entry.link) {
+    if (l.rel === 'alternate' && l.href) return l.href;
+  }
+  return entry.link[0] && entry.link[0].href ? entry.link[0].href : '#';
+}
+
+function buildPostElement(data) {
+  const article = document.createElement('article');
+
+  const h2 = document.createElement('h2');
+  h2.textContent = data.title;
+  article.appendChild(h2);
+
+  const meta = document.createElement('p');
+  meta.className = 'meta';
+  meta.innerHTML = `<strong>Author:</strong> ${data.author} | <strong>Published:</strong> ${data.published}`;
+  article.appendChild(meta);
+
+  article.appendChild(document.createElement('hr'));
+
+  if (data.featuredImage) {
+    const img = document.createElement('img');
+    img.src = data.featuredImage;
+    img.alt = data.title + ' — featured image';
+    img.style.maxWidth = '100%';
+    img.style.height = 'auto';
+    img.style.display = 'block';
+    img.style.marginBottom = '12px';
+    article.appendChild(img);
   }
 
-  loadMoreBtn.addEventListener('click', renderPosts);
+  const p = document.createElement('p');
+  p.textContent = data.snippet;
+  article.appendChild(p);
+
+  const a = document.createElement('a');
+  a.href = data.link;
+  a.textContent = 'Read more';
+  a.style.display = 'inline-block';
+  a.style.marginTop = '10px';
+  article.appendChild(a);
+
+  return article;
+}
+
+/* Main fetch */
+(async function loadPosts() {
+  const postsContainer = document.getElementById(POSTS_CONTAINER_ID);
+  const postCountEl = document.getElementById(POST_COUNT_ID);
+
+  postsContainer.innerHTML = '<p>Loading posts…</p>';
+
+  try {
+    const resp = await fetch(BLOG_JSON);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    const json = await resp.json();
+    const entries = json.feed && json.feed.entry ? json.feed.entry : [];
+    const total = entries.length;
+
+    postCountEl.textContent = `Total posts: ${total}`;
+    postsContainer.innerHTML = '';
+
+    if (!entries.length) {
+      postsContainer.innerHTML = '<p>No posts found yet.</p>';
+      return;
+    }
+
+    let rendered = 0;
+    for (const entry of entries) {
+      if (rendered >= MAX_POSTS) break;
+
+      const title = entry.title && entry.title.$t ? stripHtml(entry.title.$t) : 'Untitled';
+
+      let snippet = '';
+      if (entry.summary && entry.summary.$t) {
+        snippet = stripHtml(entry.summary.$t);
+      } else if (entry.content && entry.content.$t) {
+        snippet = stripHtml(entry.content.$t).slice(0, 300);
+        if (snippet.length >= 300) snippet += '…';
+      }
+
+      let author = 'Unknown';
+      try {
+        if (entry.author && entry.author[0] && entry.author[0].name.$t) {
+          author = entry.author[0].name.$t;
+        }
+      } catch (_) {}
+
+      const published = entry.published ? formatDate(entry.published.$t || entry.published) : '';
+
+      const featuredImage = findFeaturedImage(entry);
+
+      const link = getAlternateLink(entry);
+
+      const postData = {
+        title,
+        snippet,
+        author,
+        published,
+        featuredImage,
+        link
+      };
+
+      const el = buildPostElement(postData);
+      postsContainer.appendChild(el);
+
+      rendered++;
+    }
+
+  } catch (err) {
+    postsContainer.innerHTML = `<p>Could not load posts. (${err.message})</p>`;
+    postCountEl.textContent = 'Total posts: 0';
+  }
+})();
 </script>
 
 </body>
