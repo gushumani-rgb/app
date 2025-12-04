@@ -1,0 +1,35 @@
+name: Generate posts.json from Blogger
+
+on:
+  push:
+    branches:
+      - main   # or your default branch
+  schedule:
+    - cron: '0 * * * *' # optional: run every hour
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install node-fetch@2
+
+      - name: Generate posts.json
+        run: node generate-posts.js
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions"
+          git add posts.json
+          git diff --quiet && echo "No changes" || git commit -m "Update posts.json from Blogger"
+          git push origin main
