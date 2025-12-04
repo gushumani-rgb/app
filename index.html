@@ -111,17 +111,17 @@
         title.appendChild(titleAnchor);
         div.appendChild(title);
 
-        // Featured Image (responsive)
+        // Featured Image (responsive + fetchpriority)
         if (post.featuredImage || post.image) {
           const img = document.createElement('img');
 
-          const widthDisplay = 543;  // displayed width
-          const heightDisplay = 293; // displayed height
+          const widthDisplay = 543;  
+          const heightDisplay = 293;  
 
           const originalPath = fixPath(post.featuredImage || post.image, 'image');
           const smallPath = originalPath.replace(/(\.[a-z]+)$/i, '-543w$1');
 
-          img.src = smallPath; // default
+          img.src = smallPath;
           img.srcset = `${smallPath} 543w, ${originalPath} 800w`;
           img.sizes = '(max-width: 600px) 100vw, 543px';
           img.width = widthDisplay;
@@ -129,6 +129,8 @@
           img.style.width = '100%';
           img.style.height = 'auto';
           img.alt = post.title ? post.title + " – featured image" : "Post featured image";
+
+          img.fetchPriority = "high"; // prioritize for LCP
           img.style.borderRadius = '8px';
           img.style.marginBottom = '8px';
 
