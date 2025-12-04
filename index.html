@@ -37,6 +37,9 @@
     .skip-link:focus {
       top: 8px;
     }
+
+    /* visually-hidden helper for labels */
+    .sr-only { position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px, 1px, 1px, 1px); white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -51,12 +54,12 @@
   <!-- Main landmark (one per page) -->
   <main id="maincontent" role="main" aria-labelledby="site-title" class="wrap" tabindex="-1">
     <div class="card" role="region" aria-label="Search posts">
-      <label for="jsonFilter" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Filter posts</label>
+      <label for="jsonFilter" class="sr-only">Filter posts</label>
       <input id="jsonFilter" class="search" placeholder="Filter posts..." />
     </div>
 
     <div class="card" role="region" aria-label="Posts list">
-      <div id="posts" class="posts-list">Loading posts...</div>
+      <div id="posts" class="posts-list" aria-live="polite">Loading posts...</div>
     </div>
   </main>
 
@@ -86,6 +89,17 @@
       return `${Math.floor(diff/86400)} day${Math.floor(diff/86400)!==1?'s':''} ago`;
     }
 
+    function makePostLink(href, titleText) {
+      // returns an anchor element that opens in a new tab with a descriptive aria-label
+      const a = document.createElement('a');
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      const safeTitle = titleText && titleText.trim() ? titleText.trim() : '';
+      a.setAttribute('aria-label', safeTitle ? `Open post: ${safeTitle}` : `Open post`);
+      return a;
+    }
+
     function renderPosts(posts) {
       const container = document.getElementById('posts');
       container.innerHTML = posts.length ? '' : 'No posts yet.';
@@ -94,21 +108,22 @@
         const div = document.createElement('div');
         div.className = 'post';
 
-        // Title
+        const postTitle = post.title && post.title.trim() ? post.title.trim() : (post.link || post.path ? (post.link || post.path) : 'Untitled');
+
+        // Title (link)
         const title = document.createElement('h3');
-        const a = document.createElement('a');
-        a.href = post.link || fixPath(post.content_file || post.path, 'post');
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.textContent = post.title || 'Untitled';
-        title.appendChild(a);
+        const titleHref = post.link || fixPath(post.content_file || post.path, 'post') || '#';
+        const titleAnchor = makePostLink(titleHref, postTitle);
+        titleAnchor.textContent = post.title || 'Untitled';
+        title.appendChild(titleAnchor);
         div.appendChild(title);
 
-        // Featured Image (with alt text)
+        // Featured Image (with alt text) — now wrapped in the title link for context
         if (post.featuredImage || post.image) {
           const img = document.createElement('img');
-          img.src = fixPath(post.featuredImage || post.image, 'image');
-          img.alt = post.title ? post.title + " – featured image" : "post image";
+          const imgSrc = fixPath(post.featuredImage || post.image, 'image');
+          img.src = imgSrc;
+          img.alt = post.title ? post.title + " – featured image" : "Post featured image";
           img.style.width = '100%';
           img.style.borderRadius = '8px';
           img.style.marginBottom = '8px';
@@ -124,30 +139,50 @@
             this.alt = "no image available";
           };
 
-          div.insertBefore(img, title.nextSibling);
+          // Wrap image with a descriptive link so the image link has an accessible name via alt
+          const imgLink = makePostLink(titleHref, postTitle);
+          imgLink.appendChild(img);
+          // put image after the title
+          div.insertBefore(imgLink, title.nextSibling);
         }
 
         // Summary + Read More
         if (post.summary || post.excerpt) {
           const p = document.createElement('p');
           p.className = 'post-text';
-          const text = post.summary || post.excerpt;
+          const text = (post.summary || post.excerpt || '').trim();
           const maxLength = 200;
 
           if(text.length > maxLength){
             p.textContent = text.slice(0, maxLength) + '… ';
-            const readMore = document.createElement('a');
-            readMore.href = post.link || fixPath(post.content_file || post.path, 'post');
-            readMore.target = '_blank';
-            readMore.rel = 'noopener noreferrer';
+
+            const readMore = makePostLink(titleHref, postTitle);
+            // Descriptive link text for context
+            const readMoreText = `Read more about "${postTitle}"`;
+            readMore.textContent = readMoreText;
             readMore.className = 'read-more';
-            readMore.textContent = 'Read More';
+            readMore.setAttribute('aria-label', `Read more about ${postTitle}`);
             p.appendChild(readMore);
           } else {
             p.textContent = text;
+            // if content is short we can still provide a descriptive link to the full post
+            const readMore = makePostLink(titleHref, postTitle);
+            readMore.textContent = `Open full post: "${postTitle}"`;
+            readMore.className = 'read-more';
+            readMore.style.display = 'inline-block';
+            readMore.style.marginLeft = '6px';
+            readMore.setAttribute('aria-label', `Open full post ${postTitle}`);
+            p.appendChild(readMore);
           }
 
           div.appendChild(p);
+        } else {
+          // No excerpt — provide a clear link to the post so the entry isn't linkless
+          const direct = makePostLink(titleHref, postTitle);
+          direct.textContent = `Open post: "${postTitle}"`;
+          direct.className = 'read-more';
+          direct.style.display = 'inline-block';
+          div.appendChild(direct);
         }
 
         // Date
