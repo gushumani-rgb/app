@@ -1,0 +1,31 @@
+async function loadPosts() {
+  const container = document.getElementById("posts");
+
+  try {
+    const res = await fetch('posts.json'); // hosted on your PWA
+    const posts = await res.json();
+
+    if (!posts.length) {
+      container.innerHTML = "No posts found.";
+      return;
+    }
+
+    container.innerHTML = "";
+    posts.forEach(post => {
+      const article = document.createElement("article");
+      article.setAttribute("role", "article");
+      article.innerHTML = `
+        ${post.featuredImage ? `<img src="${post.featuredImage}" alt="${post.title}" class="featured-image">` : ""}
+        <h2><a href="${post.link}" target="_blank" rel="noopener noreferrer">${post.title}</a></h2>
+        <div class="meta">By ${post.author} | ${new Date(post.published).toLocaleDateString()}</div>
+        <p class="snippet">${post.snippet}</p>
+      `;
+      container.appendChild(article);
+    });
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = "Failed to load posts.";
+  }
+}
+
+loadPosts();
