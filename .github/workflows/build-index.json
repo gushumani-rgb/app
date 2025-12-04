@@ -25,13 +25,27 @@ jobs:
       - name: Generate index.json
         run: node scripts/generate-index.js
 
-      - name: List files for debug
-        run: ls -la
+      - name: Check if index.json is non-empty
+        id: check-empty
+        run: |
+          FILE="index.json"
+          if [ ! -s "$FILE" ]; then
+            echo "empty=true" >> $GITHUB_OUTPUT
+          else
+            echo "empty=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Commit and push index.json
+      - name: Check for changes
+        id: git-check
+        if: steps.check-empty.outputs.empty == 'false'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add index.json
-          git commit -m "Update index.json [skip ci]" || echo "No changes to commit"
+          git diff --cached --quiet || echo "changes" >> $GITHUB_OUTPUT
+
+      - name: Commit and push index.json if changed
+        if: steps.check-empty.outputs.empty == 'false' && steps.git-check.outputs.changes == 'changes'
+        run: |
+          git commit -m "Update index.json [skip ci]"
           git push
