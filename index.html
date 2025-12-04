@@ -68,31 +68,10 @@
     document.body.appendChild(script);
   </script>
 
-  <!-- Web Push Notifications -->
+  <!-- Simplified Service Worker Registration -->
   <script>
-    function urlBase64ToUint8Array(base64String) {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-      const rawData = atob(base64);
-      return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-    }
-
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.register('/sw.js').then(async (reg) => {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          const subscription = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array('BNDg5h2Qv4TzP6fLsRZjYbH4lEo1r9MJq6wH-7zK5FlR0NxO7u0GvU1y2CjfXgYc8sLkS0tJcZJH6l5Qy1Vx1x0')
-          });
-
-          await fetch('https://thabo.gushumani.workers.dev/subscribe', {
-            method: 'POST',
-            body: JSON.stringify(subscription),
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-      });
+    if (typeof navigator.serviceWorker !== 'undefined') {
+      navigator.serviceWorker.register('sw.js');
     }
   </script>
 
