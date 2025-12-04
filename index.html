@@ -4,206 +4,55 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Work From Anywhere</title>
-
 <style>
-  body { 
-    font-family: Arial, sans-serif; 
-    padding: 20px; 
-    max-width: 800px; 
-    margin: auto; 
-  }
-
-  article { 
-    margin-bottom: 40px; 
-  }
-
-  h2 { 
-    margin-bottom: 5px; 
-  }
-
-  hr { 
-    margin: 15px 0; 
-  }
-
-  p.meta { 
-    font-size: 0.9em; 
-    color: #555; 
-  }
-
-  img {
-    border-radius: 6px;
-  }
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+  article { margin-bottom: 40px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
+  h2 { margin-bottom: 5px; }
+  .snippet { color: #555; }
 </style>
 </head>
-
 <body>
-
 <h1>Work From Anywhere</h1>
-
-<p id="post-count">Loading posts...</p>
-
-<!-- Container for dynamic posts -->
-<div id="posts"></div>
+<div id="posts">Loading posts...</div>
 
 <script>
-/* CONFIG */
-const BLOG_JSON = 'https://thabogushumani.blogspot.com/feeds/posts/default?alt=json&max-results=50';
-const MAX_POSTS = 50;
-const POSTS_CONTAINER_ID = 'posts';
-const POST_COUNT_ID = 'post-count';
+const BLOG_JSON = "https://thabogushumani.blogspot.com/feeds/posts/default?alt=json&max-results=10";
 
-/* Helpers */
-function stripHtml(html) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html || '';
-  return tmp.textContent || tmp.innerText || '';
-}
-
-function formatDate(bloggerDate) {
+async function loadPosts() {
+  const container = document.getElementById("posts");
+  container.innerHTML = "Loading posts...";
+  
   try {
-    const d = new Date(bloggerDate);
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-  } catch (e) {
-    return bloggerDate;
-  }
-}
-
-function findFeaturedImage(entry) {
-  try {
-    if (entry.media$thumbnail && entry.media$thumbnail.url) {
-      return entry.media$thumbnail.url.replace(/s72-c/, 's640');
-    }
-  } catch (_) {}
-
-  try {
-    const content = entry.content && entry.content.$t;
-    if (content) {
-      const m = content.match(/<img[^>]+src=['"]([^'"]+)['"]/i);
-      if (m && m[1]) return m[1];
-    }
-  } catch (_) {}
-
-  return null;
-}
-
-function getAlternateLink(entry) {
-  if (!entry.link) return '#';
-  for (const l of entry.link) {
-    if (l.rel === 'alternate' && l.href) return l.href;
-  }
-  return entry.link[0] && entry.link[0].href ? entry.link[0].href : '#';
-}
-
-function buildPostElement(data) {
-  const article = document.createElement('article');
-
-  const h2 = document.createElement('h2');
-  h2.textContent = data.title;
-  article.appendChild(h2);
-
-  const meta = document.createElement('p');
-  meta.className = 'meta';
-  meta.innerHTML = `<strong>Author:</strong> ${data.author} | <strong>Published:</strong> ${data.published}`;
-  article.appendChild(meta);
-
-  article.appendChild(document.createElement('hr'));
-
-  if (data.featuredImage) {
-    const img = document.createElement('img');
-    img.src = data.featuredImage;
-    img.alt = data.title + ' — featured image';
-    img.style.maxWidth = '100%';
-    img.style.height = 'auto';
-    img.style.display = 'block';
-    img.style.marginBottom = '12px';
-    article.appendChild(img);
-  }
-
-  const p = document.createElement('p');
-  p.textContent = data.snippet;
-  article.appendChild(p);
-
-  const a = document.createElement('a');
-  a.href = data.link;
-  a.textContent = 'Read more';
-  a.style.display = 'inline-block';
-  a.style.marginTop = '10px';
-  article.appendChild(a);
-
-  return article;
-}
-
-/* Main fetch */
-(async function loadPosts() {
-  const postsContainer = document.getElementById(POSTS_CONTAINER_ID);
-  const postCountEl = document.getElementById(POST_COUNT_ID);
-
-  postsContainer.innerHTML = '<p>Loading posts…</p>';
-
-  try {
-    const resp = await fetch(BLOG_JSON);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
-    const json = await resp.json();
-    const entries = json.feed && json.feed.entry ? json.feed.entry : [];
-    const total = entries.length;
-
-    postCountEl.textContent = `Total posts: ${total}`;
-    postsContainer.innerHTML = '';
+    const res = await fetch(BLOG_JSON);
+    const data = await res.json();
+    const entries = data.feed.entry || [];
 
     if (!entries.length) {
-      postsContainer.innerHTML = '<p>No posts found yet.</p>';
+      container.innerHTML = "No posts found.";
       return;
     }
 
-    let rendered = 0;
-    for (const entry of entries) {
-      if (rendered >= MAX_POSTS) break;
-
-      const title = entry.title && entry.title.$t ? stripHtml(entry.title.$t) : 'Untitled';
-
-      let snippet = '';
-      if (entry.summary && entry.summary.$t) {
-        snippet = stripHtml(entry.summary.$t);
-      } else if (entry.content && entry.content.$t) {
-        snippet = stripHtml(entry.content.$t).slice(0, 300);
-        if (snippet.length >= 300) snippet += '…';
-      }
-
-      let author = 'Unknown';
-      try {
-        if (entry.author && entry.author[0] && entry.author[0].name.$t) {
-          author = entry.author[0].name.$t;
-        }
-      } catch (_) {}
-
-      const published = entry.published ? formatDate(entry.published.$t || entry.published) : '';
-
-      const featuredImage = findFeaturedImage(entry);
-
-      const link = getAlternateLink(entry);
-
-      const postData = {
-        title,
-        snippet,
-        author,
-        published,
-        featuredImage,
-        link
-      };
-
-      const el = buildPostElement(postData);
-      postsContainer.appendChild(el);
-
-      rendered++;
-    }
+    container.innerHTML = "";
+    entries.forEach(entry => {
+      const title = entry.title.$t;
+      const link = entry.link.find(l => l.rel === "alternate").href;
+      const snippet = entry.content ? entry.content.$t.substring(0, 200) + "..." : "";
+      
+      const article = document.createElement("article");
+      article.innerHTML = `
+        <h2><a href="${link}" target="_blank">${title}</a></h2>
+        <p class="snippet">${snippet}</p>
+      `;
+      container.appendChild(article);
+    });
 
   } catch (err) {
-    postsContainer.innerHTML = `<p>Could not load posts. (${err.message})</p>`;
-    postCountEl.textContent = 'Total posts: 0';
+    console.error(err);
+    container.innerHTML = "Failed to load posts.";
   }
-})();
-</script>
+}
 
+loadPosts();
+</script>
 </body>
 </html>
