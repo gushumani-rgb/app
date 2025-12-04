@@ -1,4 +1,4 @@
-const CACHE = "pwabuilder-offline-page-v1";
+const CACHE = "offline-cache-v1";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
