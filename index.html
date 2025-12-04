@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Work From Anywhere</title>
   <meta name="description" content="Explore tips, guides, and insights on how to work from anywhere in the world. Stay productive, travel freely, and optimize your remote lifestyle." />
 
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; background: #ffffff; color: #111; }
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; background: #fff; color: #111; }
     header { text-align: center; margin-bottom: 30px; }
     article { margin-bottom: 40px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
     h1 { margin-top: 0; }
@@ -29,8 +28,8 @@
     Loading posts...
   </main>
 
+  <!-- Pull Blogger posts dynamically -->
   <script>
-    // Display Blogger posts
     function displayPosts(data) {
       const container = document.getElementById("posts");
       const entries = data.feed.entry || [];
@@ -64,72 +63,38 @@
       });
     }
 
-    // Load Blogger posts dynamically
     const script = document.createElement("script");
     script.src = "https://thabogushumani.blogspot.com/feeds/posts/default?alt=json-in-script&callback=displayPosts&max-results=100";
     document.body.appendChild(script);
   </script>
 
-  <!-- Firebase Notifications -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
-
+  <!-- Web Push Notifications -->
   <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyBk9CnCJlTnSkvdC2PNB6UYiV0BnAkO088",
-      authDomain: "work-from-anywhere-ac57b.firebaseapp.com",
-      projectId: "work-from-anywhere-ac57b",
-      storageBucket: "work-from-anywhere-ac57b.firebasestorage.app",
-      messagingSenderId: "1058696678009",
-      appId: "1:1058696678009:web:a408c66c367439a22b22a8",
-      measurementId: "G-KJ1LHJWTZX"
-    };
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+    }
 
-    firebase.initializeApp(firebaseConfig);
-    const messaging = firebase.messaging();
-
-    // Request notifications
-    function requestNotificationPermission() {
-      Notification.requestPermission().then(permission => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.register('/sw.js').then(async (reg) => {
+        const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          messaging.getToken({
-            vapidKey: 'BDJXLByXJrQ8SbjR1D9TdXkC2FgobKde9J4HcpWpKTWGtul01NFSSwFkMESgpuj_6mneMUioheGNFajKWdYcK6Q'
-          }).then(token => {
-            console.log('FCM Token:', token);
-            fetch(`https://iid.googleapis.com/iid/v1/${token}/rel/topics/all`, {
-              method: 'POST',
-              headers: { 'Authorization': 'key=m8CiUozg6owbUTM0E2cdpYGU4xr_EpoSeewTjaqx5f0' }
-            }).then(res => {
-              if(res.ok) console.log('Subscribed to topic "all"');
-              else console.error('Failed to subscribe', res.status);
-            }).catch(console.error);
-          }).catch(console.error);
+          const subscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array('BNDg5h2Qv4TzP6fLsRZjYbH4lEo1r9MJq6wH-7zK5FlR0NxO7u0GvU1y2CjfXgYc8sLkS0tJcZJH6l5Qy1Vx1x0')
+          });
+
+          await fetch('https://thabo.gushumani.workers.dev/subscribe', {
+            method: 'POST',
+            body: JSON.stringify(subscription),
+            headers: { 'Content-Type': 'application/json' }
+          });
         }
       });
     }
-
-    if (Notification.permission === 'default') requestNotificationPermission();
-
-    // Handle foreground notifications
-    messaging.onMessage(payload => {
-      if (Notification.permission === 'granted') {
-        const { title, body, icon, click_action } = payload.notification;
-        const notification = new Notification(title, { body, icon });
-        notification.onclick = function(event) {
-          event.preventDefault();
-          window.open(click_action, '_blank');
-          notification.close();
-        };
-      }
-    });
   </script>
-
-  <!-- Service Worker Registration -->
-  <script>
-    if (typeof navigator.serviceWorker !== 'undefined') {
-      navigator.serviceWorker.register('sw.js')
-    </script>
 
 </body>
 </html>
