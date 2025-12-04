@@ -2,27 +2,25 @@
   "name": "Anywhere Income",
   "short_name": "Anywhere Income",
   "description": "Discover the best earning apps to make money online fast. Learn how to earn from your phone with trusted work-from-home and work-from-anywhere apps.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "https://app-a24.pages.dev/",
+  "scope": "https://app-a24.pages.dev/",
   "display": "standalone",
   "orientation": "natural",
   "background_color": "#ffffff",
   "theme_color": "#cccccc",
   "dir": "ltr",
-  
-    "screenshots": [
-   {
-    "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_154444_Chrome-ezgif.com-resize%20(1).png",
-    "sizes": "1920x1080",
-    "type": "image/png",
-    "form_factor": "wide"
-   },
-   {
-    "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_203251_Chrome-ezgif.com-jpg-to-png-converter.png",
-    "sizes": "720x1280",
-    "type": "image/png",
-    "form_factor": "narrow"
-  
+  "screenshots": [
+    {
+      "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_154444_Chrome-ezgif.com-resize%20(1).png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_203251_Chrome-ezgif.com-jpg-to-png-converter.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
     },
     {
       "src": "https://my-blog-posts.pages.dev/Images/Screenshot_20251203_154903_Chrome-ezgif.com-resize.png",
@@ -49,7 +47,6 @@
       "form_factor": "narrow"
     }
   ],
-
   "icons": [
     {
       "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEja4HGDac9YsLSAyq-heDBYmHTdaNcGj-P9f_JsWJoyEFV7Obdccl9iAsZlKOiT9Om_B_N1KO8aH23oPd76nxLZQ0WRQS5yczdU4QzIxOhyphenhyphen0OKX-0iwwy0qNIy1UrE3R2E6T5jIJBZU0HfXqP-tiaiGlNBG7vweCX_kFK9QDH4x8Le1K1eWOLMV2nOegg2A/s1600/1000072745.png",
@@ -67,7 +64,6 @@
       "type": "image/png"
     }
   ],
-
   "id": "com.wfa.app",
   "lang": "en",
   "display_override": [
@@ -75,45 +71,130 @@
     "minimal-ui",
     "standalone"
   ],
-  "categories": ["business", "education", "finance"],
-
+  "categories": [
+    "business",
+    "education",
+    "finance"
+  ],
   "share_target": {
     "method": "GET",
-    "action": "https://thabogushumani.blogspot.com/share.html",
+    "action": "https://app-a24.pages.dev/share.html",
     "params": {
       "title": "Anywhere Income",
       "text": "Check out this PWA!",
-      "url": "https://thabogushumani.blogspot.com/",
+      "url": "https://app-a24.pages.dev/",
       "files": [
-        { "name": "image", "accept": [".png", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"] },
-        { "name": "video", "accept": [".mpeg", ".mp4", ".aac", ".ogg", ".flac", ".aiff", ".mov", ".avi", ".mkv"] },
-        { "name": "audio", "accept": [".mp3", ".m4a", ".ogg", ".flac", ".aiff"] },
-        { "name": "archives", "accept": [".7z", ".zip", ".rar"] },
-        { "name": "documents", "accept": [".pdf", ".doc", ".docx", ".txt"] },
-        { "name": "html", "accept": [".html"] },
-        { "name": "text", "accept": [".txt"] },
-        { "name": "sheets", "accept": [".xls", ".csv", ".ppt", ".pptx"] }
+        {
+          "name": "image",
+          "accept": [
+            ".png",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".svg",
+            ".bmp",
+            ".ico"
+          ]
+        },
+        {
+          "name": "video",
+          "accept": [
+            ".mpeg",
+            ".mp4",
+            ".aac",
+            ".ogg",
+            ".flac",
+            ".aiff",
+            ".mov",
+            ".avi",
+            ".mkv"
+          ]
+        },
+        {
+          "name": "audio",
+          "accept": [
+            ".mp3",
+            ".m4a",
+            ".ogg",
+            ".flac",
+            ".aiff"
+          ]
+        },
+        {
+          "name": "archives",
+          "accept": [
+            ".7z",
+            ".zip",
+            ".rar"
+          ]
+        },
+        {
+          "name": "documents",
+          "accept": [
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".txt"
+          ]
+        },
+        {
+          "name": "html",
+          "accept": [
+            ".html"
+          ]
+        },
+        {
+          "name": "text",
+          "accept": [
+            ".txt"
+          ]
+        },
+        {
+          "name": "sheets",
+          "accept": [
+            ".xls",
+            ".csv",
+            ".ppt",
+            ".pptx"
+          ]
+        }
       ]
     }
   },
-
   "prefer_related_applications": false,
-
   "related_applications": [
-    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.remotework", "id": "com.remotework" },
-    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.jenos.jobsitesonline", "id": "com.jenos.jobsitesonline" },
-    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.umongous.paidviewpoint", "id": "com.umongous.paidviewpoint" },
-    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.zareklamy", "id": "com.zareklamy" },
-    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.wework.ondemand", "id": "com.wework.ondemand" }
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.remotework",
+      "id": "com.remotework"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.jenos.jobsitesonline",
+      "id": "com.jenos.jobsitesonline"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.umongous.paidviewpoint",
+      "id": "com.umongous.paidviewpoint"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.zareklamy",
+      "id": "com.zareklamy"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.wework.ondemand",
+      "id": "com.wework.ondemand"
+    }
   ],
-
   "protocol_handlers": [
     {
       "protocol": "web+anywhereincome",
       "url": "/?url=%s"
     }
   ],
-
   "shortcuts": [
     {
       "name": "Top Featured",
@@ -141,10 +222,8 @@
       "description": "Read privacy policy"
     }
   ],
-
   "edge_side_panel": {
     "preferred_width": 400
   },
-
   "iarc_rating_id": "Not Rated"
 }
