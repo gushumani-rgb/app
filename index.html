@@ -7,21 +7,25 @@
   <meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly.">
   <style>
     :root{
-      --bg:#f7f8fb; --card:#fff; --muted:#6b7280; --accent:#0b63b8;
+      --bg:#f7f8fb; 
+      --card:#fff; 
+      --muted:#4a5568; /* darker muted text for readability */
+      --accent:#0b63b8; 
+      --date:#1f2937; /* high-contrast date text */
     }
     html,body{height:100%;margin:0;background:var(--bg);font-family:Arial,sans-serif;}
     .wrap{max-width:800px;margin:36px auto;padding:20px;}
     .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(11,63,120,0.06);overflow:hidden;margin-bottom:14px;}
     .posts-list .post{border-radius:10px;padding:12px;border:1px solid #eef3fb;margin-bottom:12px;}
-    .posts-list .post h2{margin:0 0 6px;font-size:16px;} /* updated for h2 */
-    .post-text{margin:0;color:var(--muted);font-size:14px;margin-bottom:8px;}
-    .date{font-size:12px;color:#9aa3b2;margin-top:8px;}
+    .posts-list .post h2{margin:0 0 6px;font-size:16px;} /* heading order fixed */
+    .post-text{margin:0;color:var(--muted);font-size:14px;margin-bottom:8px;} /* improved contrast */
+    .date{font-size:12px;color:var(--date);margin-top:8px;} /* improved contrast */
     .search{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
     a{color:var(--accent);text-decoration:none;}
     a:hover{text-decoration:underline;}
     .read-more{display:inline-block;margin-top:6px;color:var(--accent);font-size:14px;}
 
-    /* Skip link styles (visible on focus) */
+    /* Skip link styles */
     .skip-link {
       position: absolute;
       top: -40px;
@@ -43,15 +47,12 @@
   </style>
 </head>
 <body>
-  <!-- Skip link -->
   <a class="skip-link" href="#maincontent">Skip to main content</a>
 
-  <!-- Header landmark -->
   <header class="wrap" role="banner" aria-label="Site header">
     <h1 id="site-title" style="text-align:center;margin-bottom:24px;color:var(--accent);">Anywhere Income</h1>
   </header>
 
-  <!-- Main landmark -->
   <main id="maincontent" role="main" aria-labelledby="site-title" class="wrap" tabindex="-1">
     <div class="card" role="region" aria-label="Search posts">
       <label for="jsonFilter" class="sr-only">Filter posts</label>
@@ -63,8 +64,7 @@
     </div>
   </main>
 
-  <!-- Footer landmark -->
-  <footer class="wrap" role="contentinfo" aria-label="Site footer" style="text-align:center;padding:12px;color:#6b7280;">
+  <footer class="wrap" role="contentinfo" aria-label="Site footer" style="text-align:center;padding:12px;color:var(--muted);">
     <small>&copy; <span id="year"></span> Anywhere Income</small>
   </footer>
 
@@ -108,7 +108,7 @@
 
         const postTitle = post.title && post.title.trim() ? post.title.trim() : (post.link || post.path ? (post.link || post.path) : 'Untitled');
 
-        // Title (link) — now h2 for proper heading order
+        // Title (h2 for proper heading order)
         const title = document.createElement('h2');
         const titleHref = post.link || fixPath(post.content_file || post.path, 'post') || '#';
         const titleAnchor = makePostLink(titleHref, postTitle);
