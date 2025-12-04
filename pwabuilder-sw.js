@@ -1,79 +1,115 @@
-// This is the service worker with the combined offline experience (Offline page + Offline copy of pages) + push notifications
+// /sw.js
+const CACHE_VERSION = 'v1';
+const CACHE_NAME = `pwabuilder-offline-page-${CACHE_VERSION}`;
 
-const CACHE = "pwabuilder-offline-page";
+// Make this a same-origin offline page (create /offline.html on app-a24.pages.dev)
+const OFFLINE_FALLBACK = '/offline.html';
 
+// Workbox (CDN)
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
-// Offline fallback page
-const offlineFallbackPage = "https://thabogushumani.blogspot.com/p/anywhere-income-offline-body-font.html";
-
-// Handle skip waiting message
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
+// Skip waiting when receiving message from page
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
 
-// Install event - cache offline fallback page
-self.addEventListener('install', async (event) => {
+// Install: cache offline page and any core assets
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE)
-      .then((cache) => cache.add(offlineFallbackPage))
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll([
+        OFFLINE_FALLBACK,
+        // add additional core files if you want: '/', '/index.html', '/styles.css'
+      ]))
+      .then(() => self.skipWaiting())
+  );
+});
+
+// Activate: clean old caches and take control
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(
+      keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : Promise.resolve()))
+    ))
+    .then(() => self.clients.claim())
   );
 });
 
 // Enable navigation preload if supported
-if (workbox.navigationPreload.isSupported()) {
+if (workbox && workbox.navigationPreload && workbox.navigationPreload.isSupported()) {
   workbox.navigationPreload.enable();
 }
 
-// Stale-while-revalidate strategy for all routes
+// Use navigation matcher for SPA navigations
 workbox.routing.registerRoute(
-  new RegExp('/*'),
+  ({request}) => request.mode === 'navigate',
   new workbox.strategies.StaleWhileRevalidate({
-    cacheName: CACHE
+    cacheName: CACHE_NAME,
   })
 );
 
-// Fetch handler - serve offline fallback on navigation failure
+// Optionally cache images and static assets (example)
+workbox.routing.registerRoute(
+  ({request}) => request.destination === 'image',
+  new workbox.strategies.CacheFirst({
+    cacheName: `images-${CACHE_VERSION}`,
+    plugins: [
+      new workbox.expiration.ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 })
+    ]
+  })
+);
+
+// Fetch handler: fallback to offline page for navigation failures
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
       try {
+        // Try navigation preload
         const preloadResp = await event.preloadResponse;
+        if (preloadResp) return preloadResp;
 
-        if (preloadResp) {
-          return preloadResp;
-        }
-
+        // Try network first
         const networkResp = await fetch(event.request);
         return networkResp;
-      } catch (error) {
-        const cache = await caches.open(CACHE);
-        const cachedResp = await cache.match(offlineFallbackPage);
-        return cachedResp;
+      } catch (err) {
+        // On failure, return cached offline page
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match(OFFLINE_FALLBACK);
+        return cached || Response.error();
       }
     })());
   }
+  // Let workbox routes handle other requests
 });
 
 // ===== PUSH NOTIFICATIONS =====
-
-// Push event listener
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Notification Title', {
-      body: data.body || 'Notification Body Text',
-      icon: data.icon || 'custom-notification-icon.png',
-      data: { path: data.path || '/' } // for notification click
-    })
-  );
+  const title = data.title || 'Notification';
+  const options = {
+    body: data.body || '',
+    icon: data.icon || '/icons/icon-192.png',
+    badge: data.badge || '/icons/badge-72.png',
+    data: { url: data.url || '/' }
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click listener
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const path = event.notification.data?.path || '/';
-  event.waitUntil(clients.openWindow(self.location.origin + path));
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus an open client if possible
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
 });
