@@ -121,8 +121,14 @@
           const img = document.createElement('img');
           const imgSrc = fixPath(post.featuredImage || post.image, 'image');
           img.src = imgSrc;
-          img.alt = post.title ? post.title + " – featured image" : "Post featured image";
+
+          // Explicit width & height for CLS
+          img.width = 800; // intrinsic width
+          img.height = 450; // intrinsic height
           img.style.width = '100%';
+          img.style.height = 'auto';
+
+          img.alt = post.title ? post.title + " – featured image" : "Post featured image";
           img.style.borderRadius = '8px';
           img.style.marginBottom = '8px';
 
@@ -135,6 +141,10 @@
               '</svg>'
             );
             this.alt = "no image available";
+            this.width = 200;
+            this.height = 120;
+            this.style.width = '100%';
+            this.style.height = 'auto';
           };
 
           const imgLink = makePostLink(titleHref, postTitle);
