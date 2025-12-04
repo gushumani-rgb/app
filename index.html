@@ -28,17 +28,19 @@
     Loading posts...
   </main>
 
-  <!-- Pull posts dynamically from posts.json -->
   <script>
+    // Dynamically load posts from index.json
     async function loadPosts() {
       const container = document.getElementById("posts");
 
       try {
-        const res = await fetch('posts.json');
+        const res = await fetch('index.json');
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+
         const posts = await res.json();
 
-        if (!posts.length) {
-          container.innerHTML = "No posts found.";
+        if (!posts || posts.length === 0) {
+          container.innerHTML = "<p>No posts are available at the moment. Please check back later.</p>";
           return;
         }
 
@@ -49,14 +51,14 @@
           article.innerHTML = `
             ${post.featuredImage ? `<img src="${post.featuredImage}" alt="${post.title}" class="featured-image">` : ""}
             <h2><a href="${post.link}" target="_blank" rel="noopener noreferrer">${post.title}</a></h2>
-            <div class="meta">By ${post.author} | ${new Date(post.published).toLocaleDateString()}</div>
-            <p class="snippet">${post.snippet}</p>
+            <div class="meta">By ${post.author || "Unknown"} | ${post.date ? new Date(post.date).toLocaleDateString() : ""}</div>
+            <p class="snippet">${post.summary || ""}</p>
           `;
           container.appendChild(article);
         });
       } catch (err) {
-        console.error(err);
-        container.innerHTML = "Failed to load posts.";
+        console.error('Error loading posts:', err);
+        container.innerHTML = "<p>Unable to load posts at this time. Please try again later.</p>";
       }
     }
 
@@ -84,18 +86,14 @@
     function requestNotificationPermission() {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
-          console.log('Notification permission granted.');
           messaging.getToken({
             vapidKey: 'BDJXLByXJrQ8SbjR1D9TdXkC2FgobKde9J4HcpWpKTWGtul01NFSSwFkMESgpuj_6mneMUioheGNFajKWdYcK6Q'
           }).then(token => {
-            console.log('FCM Token:', token);
             fetch(`https://iid.googleapis.com/iid/v1/${token}/rel/topics/all`, {
               method: 'POST',
               headers: { 'Authorization': 'key=m8CiUozg6owbUTM0E2cdpYGU4xr_EpoSeewTjaqx5f0' }
-            }).then(res => {
-              if(res.ok) console.log('Subscribed to topic "all"');
-              else console.error('Failed to subscribe', res.status);
-            }).catch(console.error);
+            }).then(res => console.log(res.ok ? 'Subscribed to topic "all"' : 'Failed to subscribe'))
+              .catch(console.error);
           }).catch(console.error);
         } else {
           console.log('Notifications denied');
@@ -107,25 +105,17 @@
 
     // Handle foreground messages
     messaging.onMessage(payload => {
-      console.log('Foreground message received:', payload);
       if (Notification.permission === 'granted') {
         const { title, body, icon, click_action } = payload.notification;
         const notification = new Notification(title, { body, icon });
-        notification.onclick = function(event) {
-          event.preventDefault();
-          window.open(click_action, '_blank');
-          notification.close();
-        };
+        notification.onclick = e => { e.preventDefault(); window.open(click_action, '_blank'); notification.close(); };
       }
     });
 
     // Register service worker for background notifications
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('firebase-messaging-sw.js', { scope: './' })
-        .then(reg => {
-          console.log('Service Worker registered with scope:', reg.scope);
-          messaging.useServiceWorker(reg);
-        })
+        .then(reg => messaging.useServiceWorker(reg))
         .catch(err => console.error('Service Worker registration failed:', err));
     }
   </script>
