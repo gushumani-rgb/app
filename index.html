@@ -16,43 +16,36 @@
 <div id="posts">Loading posts...</div>
 
 <script>
-const BLOG_JSON = "https://thabogushumani.blogspot.com/feeds/posts/default?alt=json&max-results=10";
-
-async function loadPosts() {
+function displayPosts(data) {
   const container = document.getElementById("posts");
-  container.innerHTML = "Loading posts...";
-  
-  try {
-    const res = await fetch(BLOG_JSON);
-    const data = await res.json();
-    const entries = data.feed.entry || [];
+  const entries = data.feed.entry || [];
 
-    if (!entries.length) {
-      container.innerHTML = "No posts found.";
-      return;
-    }
-
-    container.innerHTML = "";
-    entries.forEach(entry => {
-      const title = entry.title.$t;
-      const link = entry.link.find(l => l.rel === "alternate").href;
-      const snippet = entry.content ? entry.content.$t.substring(0, 200) + "..." : "";
-      
-      const article = document.createElement("article");
-      article.innerHTML = `
-        <h2><a href="${link}" target="_blank">${title}</a></h2>
-        <p class="snippet">${snippet}</p>
-      `;
-      container.appendChild(article);
-    });
-
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = "Failed to load posts.";
+  if (!entries.length) {
+    container.innerHTML = "No posts found.";
+    return;
   }
+
+  container.innerHTML = "";
+  entries.forEach(entry => {
+    const title = entry.title.$t;
+    const link = entry.link.find(l => l.rel === "alternate").href;
+    let snippet = entry.content ? entry.content.$t : entry.summary?.$t || "";
+    snippet = snippet.replace(/<[^>]*>?/gm, ""); // remove HTML tags
+    snippet = snippet.substring(0, 200) + (snippet.length > 200 ? "..." : "");
+
+    const article = document.createElement("article");
+    article.innerHTML = `
+      <h2><a href="${link}" target="_blank">${title}</a></h2>
+      <p class="snippet">${snippet}</p>
+    `;
+    container.appendChild(article);
+  });
 }
 
-loadPosts();
+// Create JSONP script tag
+const script = document.createElement("script");
+script.src = "https://thabogushumani.blogspot.com/feeds/posts/default?alt=json-in-script&callback=displayPosts&max-results=10";
+document.body.appendChild(script);
 </script>
 </body>
 </html>
