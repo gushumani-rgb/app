@@ -28,44 +28,39 @@
     Loading posts...
   </main>
 
-  <!-- Pull Blogger posts dynamically -->
+  <!-- Pull posts dynamically from posts.json -->
   <script>
-    function displayPosts(data) {
+    async function loadPosts() {
       const container = document.getElementById("posts");
-      const entries = data.feed.entry || [];
 
-      if (!entries.length) {
-        container.innerHTML = "No posts found.";
-        return;
+      try {
+        const res = await fetch('posts.json');
+        const posts = await res.json();
+
+        if (!posts.length) {
+          container.innerHTML = "No posts found.";
+          return;
+        }
+
+        container.innerHTML = "";
+        posts.forEach(post => {
+          const article = document.createElement("article");
+          article.setAttribute("role", "article");
+          article.innerHTML = `
+            ${post.featuredImage ? `<img src="${post.featuredImage}" alt="${post.title}" class="featured-image">` : ""}
+            <h2><a href="${post.link}" target="_blank" rel="noopener noreferrer">${post.title}</a></h2>
+            <div class="meta">By ${post.author} | ${new Date(post.published).toLocaleDateString()}</div>
+            <p class="snippet">${post.snippet}</p>
+          `;
+          container.appendChild(article);
+        });
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = "Failed to load posts.";
       }
-
-      container.innerHTML = "";
-      entries.forEach(entry => {
-        const title = entry.title.$t;
-        const link = entry.link.find(l => l.rel === "alternate").href;
-
-        let snippet = entry.content ? entry.content.$t : entry.summary?.$t || "";
-        snippet = snippet.replace(/<[^>]*>?/gm, "").substring(0, 200) + (snippet.length > 200 ? "..." : "");
-
-        let featuredImage = entry.media$thumbnail ? entry.media$thumbnail.url.replace(/\/s72-c\//, "/s600/") : "";
-        const author = entry.author?.[0]?.name?.$t || "Unknown";
-        const published = entry.published ? new Date(entry.published.$t).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "";
-
-        const article = document.createElement("article");
-        article.setAttribute("role", "article");
-        article.innerHTML = `
-          ${featuredImage ? `<img src="${featuredImage}" alt="${title}" class="featured-image">` : ""}
-          <h2><a href="${link}" target="_blank" rel="noopener noreferrer">${title}</a></h2>
-          <div class="meta" aria-label="author and published date">By ${author} | ${published}</div>
-          <p class="snippet">${snippet}</p>
-        `;
-        container.appendChild(article);
-      });
     }
 
-    const script = document.createElement("script");
-    script.src = "https://thabogushumani.blogspot.com/feeds/posts/default?alt=json-in-script&callback=displayPosts&max-results=100";
-    document.body.appendChild(script);
+    loadPosts();
   </script>
 
   <!-- Firebase & Web Push Notifications -->
@@ -124,7 +119,7 @@
       }
     });
 
-    // Register service worker for background notifications (relative path for subfolder support)
+    // Register service worker for background notifications
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('firebase-messaging-sw.js', { scope: './' })
         .then(reg => {
