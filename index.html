@@ -1,39 +1,12 @@
-<!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="/manifest.json" />
-
-  <!-- Theme color -->
-  <meta name="theme-color" content="#ffffff" />
-
-  <!-- iOS support -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="/icons/icon-192.png" />
-
-  <!-- Page title and description -->
   <title>Work From Anywhere</title>
   <meta name="description" content="Explore tips, guides, and insights on how to work from anywhere in the world. Stay productive, travel freely, and optimize your remote lifestyle." />
 
-  <!-- Service worker registration -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/service-worker.js")
-          .then(reg => console.log("Service Worker registered", reg))
-          .catch(err => console.error("Service Worker registration failed", err));
-      });
-    }
-  </script>
-
-  <!-- CSS -->
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; background: #ffffff; color: #111; }
     header { text-align: center; margin-bottom: 30px; }
@@ -57,6 +30,7 @@
   </main>
 
   <script>
+    // Display Blogger posts
     function displayPosts(data) {
       const container = document.getElementById("posts");
       const entries = data.feed.entry || [];
@@ -71,21 +45,11 @@
         const title = entry.title.$t;
         const link = entry.link.find(l => l.rel === "alternate").href;
 
-        // Snippet
         let snippet = entry.content ? entry.content.$t : entry.summary?.$t || "";
-        snippet = snippet.replace(/<[^>]*>?/gm, "");
-        snippet = snippet.substring(0, 200) + (snippet.length > 200 ? "..." : "");
+        snippet = snippet.replace(/<[^>]*>?/gm, "").substring(0, 200) + (snippet.length > 200 ? "..." : "");
 
-        // Featured image
-        let featuredImage = "";
-        if (entry.media$thumbnail) {
-          featuredImage = entry.media$thumbnail.url.replace(/\/s72-c\//, "/s600/");
-        }
-
-        // Author
+        let featuredImage = entry.media$thumbnail ? entry.media$thumbnail.url.replace(/\/s72-c\//, "/s600/") : "";
         const author = entry.author?.[0]?.name?.$t || "Unknown";
-
-        // Published date
         const published = entry.published ? new Date(entry.published.$t).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "";
 
         const article = document.createElement("article");
@@ -100,10 +64,72 @@
       });
     }
 
-    // Fetch Blogger posts
+    // Load Blogger posts dynamically
     const script = document.createElement("script");
     script.src = "https://thabogushumani.blogspot.com/feeds/posts/default?alt=json-in-script&callback=displayPosts&max-results=100";
     document.body.appendChild(script);
+  </script>
+
+  <!-- Firebase Notifications & Service Worker -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+
+  <script>
+    // Service worker registration
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => console.log('Service Worker registered', reg))
+        .catch(err => console.error('Service Worker registration failed', err));
+    }
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBk9CnCJlTnSkvdC2PNB6UYiV0BnAkO088",
+      authDomain: "work-from-anywhere-ac57b.firebaseapp.com",
+      projectId: "work-from-anywhere-ac57b",
+      storageBucket: "work-from-anywhere-ac57b.firebasestorage.app",
+      messagingSenderId: "1058696678009",
+      appId: "1:1058696678009:web:a408c66c367439a22b22a8",
+      measurementId: "G-KJ1LHJWTZX"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
+
+    // Request notifications
+    function requestNotificationPermission() {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          messaging.getToken({
+            vapidKey: 'BDJXLByXJrQ8SbjR1D9TdXkC2FgobKde9J4HcpWpKTWGtul01NFSSwFkMESgpuj_6mneMUioheGNFajKWdYcK6Q'
+          }).then(token => {
+            console.log('FCM Token:', token);
+            fetch(`https://iid.googleapis.com/iid/v1/${token}/rel/topics/all`, {
+              method: 'POST',
+              headers: { 'Authorization': 'key=m8CiUozg6owbUTM0E2cdpYGU4xr_EpoSeewTjaqx5f0' }
+            }).then(res => {
+              if(res.ok) console.log('Subscribed to topic "all"');
+              else console.error('Failed to subscribe', res.status);
+            }).catch(console.error);
+          }).catch(console.error);
+        }
+      });
+    }
+
+    if (Notification.permission === 'default') requestNotificationPermission();
+
+    // Handle foreground notifications
+    messaging.onMessage(payload => {
+      if (Notification.permission === 'granted') {
+        const { title, body, icon, click_action } = payload.notification;
+        const notification = new Notification(title, { body, icon });
+        notification.onclick = function(event) {
+          event.preventDefault();
+          window.open(click_action, '_blank');
+          notification.close();
+        };
+      }
+    });
   </script>
 </body>
 </html>
