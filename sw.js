@@ -21,7 +21,10 @@ const PRECACHE = [
   "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh6LASxKVODj5onvgXZ9SaKfaZBVzfIILNPivZRpTvKjq084JdEG5furEPxtD97x7gJQGB75LlqfOV-tqmUClbXVdsysQ0VxA_9s4lkdk-HgUXDp6acg6FIXhzVegWKwdEWyENfJSOi0JSnc-MiARxHvMbZ-WclgcNCnwWWIq7WlVJmSuaxx3AYV6iqm286/s1600/1000062612.webp",
   "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhfqRzchs05mA1u_hcEAuk6R2HG8uviYtDV9N-Qu9IM3mMcwm3T-z33UziWrTCMl8MC1EZ-JNOv14ynHPpnszszKdGznE1otLulAsQIY54wEXduLS27Y813weuNwR4o-Apa_M8etkgE-BAAu94POwOivHEhbleOJB7_Y6q2KPpLD6Rr5TpPUQfVFtaoNsi8/s1600/1000062606.webp",
   "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEic2FhelAjWHgHP9b5FIftOFj7-AGqsKIvFi3BD-DYVjOjRr1HG5JwwAsR1Jm5I3_L3nFURoZpUzDEDAyOUKvON8XnY9vxhmmhM4dbbUP6-MszbzhpXcag1vySCluleYMGA0V8tEFqwCwEmp5Ia1mr2679lvF66vDyPCdfcLOjtGwiANshxGlEHcxznBIup/s1600/1000062635.webp",
-  "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEif0-GM_-zZRKll0-JlCRarD2Q4BHnKG_9wyQ42iuMxBBooYX6dJQ_kP00bn4SB7mjhuJAcZ8VDFhW2IvRbGElXii-9Wtu0h1pfKFcynhj0_e4zsnhYgxTQcN56f0rJs0fs-7ZmT1lER3kn_gOpElkMJ79UCTJjRiPBTAvJNGkF_wJD4ePbaOcvkcYJ_pOg/s1600/1000062641.webp"
+  "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEif0-GM_-zZRKll0-JlCRarD2Q4BHnKG_9wyQ42iuMxBBooYX6dJQ_kP00bn4SB7mjhuJAcZ8VDFhW2IvRbGElXii-9Wtu0h1pfKFcynhj0_e4zsnhYgxTQcN56f0rJs0fs-7ZmT1lER3kn_gOpElkMJ79UCTJjRiPBTAvJNGkF_wJD4ePbaOcvkcYJ_pOg/s1600/1000062641.webp",
+  "https://img.youtube.com/vi/0euCUIUDp0c/hqdefault.jpg",
+  "https://img.youtube.com/vi/gkIULH2sRdQ/hqdefault.jpg",
+  "https://img.youtube.com/vi/oLvMXuXa2G0/hqdefault.jpg"
 ];
 
 // Install: cache known resources
