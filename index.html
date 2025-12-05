@@ -110,24 +110,34 @@ function renderPosts(posts){
     ].filter(Boolean);
     [...new Set(images)].forEach(src => {
       const img = document.createElement('img'); 
-      img.src = src; 
       img.alt = titleText; 
 
-      // Responsive styling
-      img.style.width = '100%';    
-      img.style.height = 'auto';   
-
+      // Async decoding and priority
       img.decoding = 'async';
       if(!firstImageSet){
         img.loading = 'eager';
-        img.setAttribute('fetchpriority', 'high');
+        img.setAttribute('fetchpriority','high');
         firstImageSet = true;
       } else {
         img.loading = 'lazy';
       }
 
-      img.onerror = () => handleImageError(img); 
+      // Handle errors
+      img.onerror = () => handleImageError(img);
 
+      // Responsive styling
+      img.style.width = '100%';
+      img.style.height = 'auto';
+
+      // Dynamically set width and height to fix CLS/PageSpeed
+      const temp = new Image();
+      temp.src = src;
+      temp.onload = () => {
+        img.width = temp.naturalWidth;
+        img.height = temp.naturalHeight;
+      };
+
+      img.src = src;
       div.appendChild(img);
     });
 
