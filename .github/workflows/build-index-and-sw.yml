@@ -33,6 +33,7 @@ jobs:
           pip install beautifulsoup4 pyyaml python-dateutil pytz
 
       - name: Build index.json
+        id: build_index
         run: |
           python - <<'PY'
           import os, json, re
@@ -66,8 +67,25 @@ jobs:
                           return {}, text
               return {}, text
 
-          def extract_youtube_thumbnail(text):
-              urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
+          def extract_youtube_id(url):
+              if not url:
+                  return None
+              try:
+                  if "youtu.be/" in url:
+                      return url.split("youtu.be/")[1].split("?")[0]
+                  elif "youtube.com/watch" in url:
+                      params = dict(x.split("=") for x in url.split("?")[1].split("&") if "=" in x)
+                      return params.get("v")
+              except Exception:
+                  return None
+              return None
+
+          def extract_youtube_thumbnail(text, link=None):
+              if link:
+                  vid = extract_youtube_id(link)
+                  if vid:
+                      return f"https://img.youtube.com/vi/{vid}/hqdefault.jpg"
+              urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
               if urls:
                   video_id = urls[0][1]
                   return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
@@ -81,19 +99,14 @@ jobs:
                       text = read_file(p)
                       meta = {}
                       body = text
-
-                      # File modified time fallback
                       try:
-                          mtime_ts = p.stat().st_mtime
-                          mtime_dt = datetime.fromtimestamp(mtime_ts, tz=TZ_OFFSET)
-                      except Exception:
+                          mtime_dt = datetime.fromtimestamp(p.stat().st_mtime, tz=TZ_OFFSET)
+                      except:
                           mtime_dt = datetime.now(TZ_OFFSET)
 
-                      # Parse front matter
                       if p.suffix.lower() in ('.md', '.markdown'):
                           fm, body = parse_front_matter(text)
-                          if fm:
-                              meta.update(fm or {})
+                          meta.update(fm or {})
                       else:
                           soup = BeautifulSoup(text, 'html.parser')
                           if soup.title and soup.title.string:
@@ -106,7 +119,7 @@ jobs:
                               meta.setdefault('tags', [t.strip() for t in kw['content'].split(',') if t.strip()])
 
                       if not meta.get('title'):
-                          m = re.search(r'^\\s*#\\s+(.+)$', body, re.MULTILINE)
+                          m = re.search(r'^\s*#\s+(.+)$', body, re.MULTILINE)
                           meta['title'] = m.group(1).strip() if m else p.stem
 
                       if not meta.get('excerpt'):
@@ -114,26 +127,23 @@ jobs:
                           ptag = soup2.find('p')
                           meta['excerpt'] = ptag.get_text(strip=True)[:300] if ptag else ''
 
-                      # --- Featured / Image ---
                       meta['featuredImage'] = None
                       meta['image'] = None
 
-                      if 'featuredImage' in meta and meta['featuredImage']:
-                          meta['featuredImage'] = meta['featuredImage'].strip()
-                          meta['image'] = meta['featuredImage']
+                      yt_thumb = extract_youtube_thumbnail(body, meta.get('link'))
+                      if yt_thumb:
+                          meta['featuredImage'] = yt_thumb
+                          meta['image'] = yt_thumb
                       else:
                           soup2 = BeautifulSoup(body, 'html.parser')
                           img_tag = soup2.find('img')
                           if img_tag and img_tag.get('src'):
                               meta['featuredImage'] = img_tag['src'].strip()
                               meta['image'] = meta['featuredImage']
-                          else:
-                              yt_thumb = extract_youtube_thumbnail(body)
-                              if yt_thumb:
-                                  meta['featuredImage'] = yt_thumb
-                                  meta['image'] = yt_thumb
+                          elif 'featuredImage' in meta and meta['featuredImage']:
+                              meta['featuredImage'] = meta['featuredImage'].strip()
+                              meta['image'] = meta['featuredImage']
 
-                      # Tags and categories
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
                       if isinstance(tags, str):
                           tags = [t.strip() for t in re.split(r'[,\\s]+', tags) if t.strip()]
@@ -141,10 +151,9 @@ jobs:
                       if isinstance(categories, str):
                           categories = [t.strip() for t in re.split(r'[,\\s]+', categories) if t.strip()]
 
-                      # Reading time
                       text_only = re.sub(r'<[^>]+>', '', body)
-                      text_only = re.sub(r'[`*_>#~\\-]{1,}', ' ', text_only)
-                      words = len(re.findall(r'\\w+', text_only))
+                      text_only = re.sub(r'[`*_>#~\-]{1,}', ' ', text_only)
+                      words = len(re.findall(r'\w+', text_only))
                       reading_time = max(1, int(round(words / 200))) if words > 0 else 1
 
                       rel = p.relative_to(root).as_posix()
@@ -159,7 +168,6 @@ jobs:
                       else:
                           slug = '/' + rel
 
-                      # --- Date parsing ---
                       dt_obj = None
                       if 'date' in meta and meta['date']:
                           try:
@@ -168,7 +176,7 @@ jobs:
                                   if not parsed.tzinfo:
                                       parsed = parsed.replace(tzinfo=timezone.utc)
                                   dt_obj = parsed.astimezone(TZ_OFFSET)
-                          except Exception:
+                          except:
                               dt_obj = None
 
                       if not dt_obj:
@@ -181,7 +189,7 @@ jobs:
                                       if not parsed.tzinfo:
                                           parsed = parsed.replace(tzinfo=timezone.utc)
                                       dt_obj = parsed.astimezone(TZ_OFFSET)
-                              except Exception:
+                              except:
                                   dt_obj = None
 
                       if not dt_obj:
@@ -204,18 +212,25 @@ jobs:
           if not posts:
               posts = [{"title": "No posts yet", "excerpt": "", "path": "/", "source": ""}]
 
-          def sort_key(item):
-              try:
-                  return dateparser.parse(item.get('date')).timestamp()
-              except:
-                  return 0
-
-          posts_sorted = sorted(posts, key=sort_key, reverse=True)
+          posts_sorted = sorted(posts, key=lambda x: dateparser.parse(x.get('date', '1970-01-01T00:00:00')).timestamp(), reverse=True)
           index_path.write_text(json.dumps(posts_sorted, indent=2, ensure_ascii=False), encoding='utf-8')
           print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
           PY
 
-      - name: Build service worker (sw.js)
+      - name: Commit index.json if changed
+        id: commit_index
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add index.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update index.json [skip ci]"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+
+      - name: Build sw.js only if index.json changed
+        if: steps.commit_index.outputs.changed == 'true'
         run: |
           python - <<'PY'
           import json, os
@@ -225,104 +240,42 @@ jobs:
           index_path = root / os.environ.get("INDEX_PATH", "index.json")
           sw_path = root / "sw.js"
 
-          PRECACHE = set()
-          # always precache root and index.json
-          PRECACHE.update(["/", "/index.json"])
-
-          try:
-              data = json.loads(index_path.read_text(encoding="utf-8"))
-          except Exception:
-              data = []
-
+          PRECACHE = set(["/", "/index.json"])
+          data = json.loads(index_path.read_text(encoding="utf-8"))
           for post in data:
-              # add post path (only if it looks like a site-relative path)
               p = post.get("path")
-              if p:
-                  # normalize: ensure it starts with single leading slash
-                  if not p.startswith("/"):
-                      p = "/" + p
-                  PRECACHE.add(p)
-              # add same-origin featured images (simple heuristic)
+              if p and not p.startswith("/"):
+                  p = "/" + p
+              PRECACHE.add(p)
               img = post.get("featuredImage") or post.get("image")
               if img:
-                  if img.startswith("/"):
-                      PRECACHE.add(img)
-                  else:
-                      # include full URL if same origin or http(s) - keep, but may be cross-origin
-                      PRECACHE.add(img)
-
-          # ensure unique and sorted for deterministic output
+                  PRECACHE.add(img)
           precache_list = sorted(list(PRECACHE))
-
           sw_content = f"""
-          // Auto-generated service worker - safe simple precache
           const CACHE_NAME = 'site-cache-v1';
           const PRECACHE = {json.dumps(precache_list, indent=2)};
-
-          // Install: cache known resources
           self.addEventListener('install', event => {{
             self.skipWaiting();
-            event.waitUntil(
-              caches.open(CACHE_NAME).then(cache => {{
-                return cache.addAll(PRECACHE.map(u => new Request(u, {{credentials: 'same-origin'}}))).catch(err => {{
-                  // In case of any failures, still continue
-                  console.warn('Some resources failed to cache during install:', err);
-                }});
-              }})
-            );
+            event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE.map(u => new Request(u, {{credentials: 'same-origin'}}))).catch(err => {{console.warn('Failed to cache:', err);}})));
           }});
-
-          // Activate: remove old caches
-          self.addEventListener('activate', event => {{
-            event.waitUntil(
-              caches.keys().then(keys => Promise.all(
-                keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-              )).then(() => self.clients.claim())
-            );
-          }});
-
-          // Fetch: navigation -> network-first, others -> cache-first fallback to network
+          self.addEventListener('activate', event => {{event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim()));}});
           self.addEventListener('fetch', event => {{
             const req = event.request;
-            if (req.method !== 'GET') return;
-            // navigation request handling
-            if (req.mode === 'navigate') {{
-              event.respondWith(
-                fetch(req).then(res => {{
-                  // update cache for navigation responses
-                  const copy = res.clone();
-                  caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-                  return res;
-                }}).catch(() => caches.match('/').then(r => r))
-              );
+            if(req.method !== 'GET') return;
+            if(req.mode === 'navigate'){{
+              event.respondWith(fetch(req).then(r => {{caches.open(CACHE_NAME).then(c => c.put(req,r.clone())); return r;}}).catch(() => caches.match('/')));
               return;
             }}
-
-            // non-navigation: try cache first
-            event.respondWith(
-              caches.match(req).then(cached => cached || fetch(req).then(networkRes => {{
-                // optionally cache fetched network resources (same-origin)
-                try {{
-                  if (new URL(req.url).origin === location.origin) {{
-                    const copy = networkRes.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-                  }}
-                }} catch(e) {{
-                  // ignore
-                }}
-                return networkRes;
-              }})).catch(() => caches.match('/'))
-            );
+            event.respondWith(caches.match(req).then(cached => cached || fetch(req).then(r=>{{try{{if(new URL(req.url).origin===location.origin)caches.open(CACHE_NAME).then(c=>c.put(req,r.clone()));}}catch(e){{}} return r;}})).catch(()=>caches.match('/')));
           }});
           """
           sw_path.write_text(sw_content, encoding="utf-8")
-          print(f"Written {sw_path} with {len(precache_list)} precached entries.")
+          print(f"Written {sw_path} with {len(precache_list)} entries.")
           PY
 
-      - name: Commit and push JSON + sw.js
+      - name: Commit and push changes
+        if: steps.commit_index.outputs.changed == 'true'
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add index.json sw.js
-          git commit -m "Update index.json and sw.js [skip ci]" || echo "Nothing to commit"
+          git add sw.js
+          git pull --rebase origin main
           git push origin main
