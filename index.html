@@ -7,86 +7,20 @@
 <meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly.">
 <link rel="manifest" href="/manifest.json">
 <link rel="alternate" type="application/json" href="/index.json">
-  <style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f7f8fb;
-    color: #4a5568;
-  }
-  .wrap {
-    max-width: 800px;
-    margin: 36px auto;
-    padding: 20px;
-  }
-  h1 {
-    text-align: center;
-    color: #0b63b8;
-    margin-bottom: 24px;
-  }
-  .search {
-    width: 100%;
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid #e6eefb;
-    margin-bottom: 12px;
-  }
-  .post {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 14px;
-    box-shadow: 0 6px 18px rgba(11,63,120,0.06);
-  }
-  .post h2 {
-    margin: 0 0 6px;
-    font-size: 16px;
-  }
-  .post img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 5 / 2;
-    min-height: 160px; /* Reserve space for images */
-    border-radius: 8px;
-    margin-bottom: 8px;
-    display: block;
-    object-fit: cover;
-  }
-  .post-text {
-    font-size: 14px;
-    margin-bottom: 8px;
-    min-height: 80px; /* Reserve space for text */
-  }
-  .read-more {
-    display: inline-block;
-    margin-top: 6px;
-    color: #0b63b8;
-    font-size: 14px;
-    text-decoration: none;
-  }
-  .date {
-    font-size: 12px;
-    color: #1f2937;
-    margin-top: 8px;
-  }
-
-  /* Skeleton Loader */
-  .post-skeleton {
-    background: #eceff6;
-    border-radius: 12px;
-    height: 200px;
-    margin-bottom: 14px;
-    animation: pulse 1.2s infinite;
-  }
-  @keyframes pulse {
-    0% {opacity: 1;}
-    50% {opacity: 0.4;}
-    100% {opacity: 1;}
-  }
-
-  #posts {
-    min-height: 500px; /* Reserve container height */
-  }
+<style>
+  body {margin:0;font-family:Arial,sans-serif;background:#f7f8fb;color:#4a5568;}
+  .wrap {max-width:800px;margin:36px auto;padding:20px;}
+  h1 {text-align:center;color:#0b63b8;margin-bottom:24px;}
+  .search {width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
+  .post {background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(11,63,120,0.06);}
+  .post h2 {margin:0 0 6px;font-size:16px;}
+  .post img {width:100%;height:auto;aspect-ratio:5/2;min-height:160px;border-radius:8px;margin-bottom:8px;display:block;object-fit:cover;}
+  .post-text {font-size:14px;margin-bottom:8px;min-height:80px;}
+  .read-more {display:inline-block;margin-top:6px;color:#0b63b8;font-size:14px;text-decoration:none;}
+  .date {font-size:12px;color:#1f2937;margin-top:8px;}
+  .post-skeleton {background:#eceff6;border-radius:12px;height:200px;margin-bottom:14px;animation:pulse 1.2s infinite;}
+  @keyframes pulse {0% {opacity:1;}50% {opacity:0.4;}100% {opacity:1;}}
+  #posts {min-height:500px;}
 </style>
 </head>
 <body>
@@ -98,7 +32,6 @@
   <div class="wrap">
     <input id="jsonFilter" class="search" placeholder="Filter posts...">
     <div id="posts">
-      <!-- Skeleton loaders to prevent CLS -->
       <div class="post-skeleton"></div>
       <div class="post-skeleton"></div>
       <div class="post-skeleton"></div>
@@ -113,12 +46,14 @@
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
 
+// Fix paths for images or posts
 function fixPath(path,type='post'){
   if(!path) return ''; 
   if(path.startsWith('http')||path.startsWith('/')) return path; 
   return type==='image'?'Images/'+path:'Posts/'+path;
 }
 
+// Time ago helper
 function timeAgo(dateStr){
   const d=new Date(dateStr), now=new Date(), diff=Math.floor((now-d)/1000);
   if(diff<60) return diff+' second'+(diff!==1?'s':'')+' ago';
@@ -127,6 +62,7 @@ function timeAgo(dateStr){
   return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago';
 }
 
+// Create link element
 function makeLink(href,title){
   const a=document.createElement('a');
   a.href=href;
@@ -136,31 +72,31 @@ function makeLink(href,title){
   return a;
 }
 
+// Handle image error fallback
 function handleImageError(img){
   img.onerror=null;
   img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>');
   img.alt='no image';
 }
 
-// Fixed YouTube thumbnail extraction
-function getYouTubeThumbnail(link){
+// Extract YouTube ID from URL
+function getYouTubeId(link){
   if(!link) return null;
   try {
-    const url = new URL(link, window.location.origin);
+    const cleanLink = link.split(/[?&]/)[0];
     let videoId = null;
-
-    if(url.hostname.includes('youtu.be')){
-      videoId = url.pathname.slice(1); // everything after "/"
-    } else if(url.hostname.includes('youtube.com')){
-      videoId = url.searchParams.get('v'); // "v" param
+    if(cleanLink.includes('youtu.be/')) videoId = cleanLink.split('youtu.be/')[1];
+    else if(cleanLink.includes('youtube.com/watch')){
+      const urlParams = new URLSearchParams(link.split('?')[1] || '');
+      videoId = urlParams.get('v');
     }
-
-    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+    return videoId;
   } catch(e){
     return null;
   }
 }
 
+// Load posts from index.json
 async function loadPosts(){
   try{
     const res=await fetch('index.json',{cache:'no-cache'});
@@ -173,11 +109,12 @@ async function loadPosts(){
   }
 }
 
+// Render posts
 function renderPosts(posts){
   const container = document.getElementById('posts'); 
   container.innerHTML = posts.length ? '' : 'No posts yet.';
 
-  // Sort posts BEFORE rendering to avoid layout shifts
+  // Sort posts by date descending
   posts.sort((a,b)=>new Date(b.date) - new Date(a.date));
 
   posts.forEach(post => {
@@ -187,18 +124,27 @@ function renderPosts(posts){
     const titleText = post.title?.trim() || 'Untitled';
     const link = post.link || fixPath(post.content_file || post.path, 'post') || '#';
 
+    // Title
     const h2 = document.createElement('h2'); 
     h2.appendChild(makeLink(link, titleText)); 
     div.appendChild(h2);
 
-    // Get images: YouTube thumbnail first, then post.image, then featuredImage
+    // Auto-detect YouTube thumbnail
+    let youtubeThumbnail = null;
+    if(post.youtubeId){
+      youtubeThumbnail = `https://img.youtube.com/vi/${post.youtubeId}/hqdefault.jpg`;
+    } else if(post.link){
+      const id = getYouTubeId(post.link);
+      youtubeThumbnail = id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+    }
+
+    // Images: YouTube thumbnail > post.image > featuredImage
     const images = [
-      getYouTubeThumbnail(post.link),
+      youtubeThumbnail,
       post.image && fixPath(post.image, 'image'),
       post.featuredImage && fixPath(post.featuredImage, 'image')
     ].filter(Boolean);
 
-    // Remove duplicates
     const uniqueImages = [...new Set(images)];
 
     uniqueImages.forEach((src, index) => {
@@ -208,20 +154,13 @@ function renderPosts(posts){
       img.decoding = 'async';
       img.width = 500;
       img.height = 200;
-
-      if(index === 0){
-        // First image: eager + fetchpriority high for LCP
-        img.loading = 'eager';
-        img.setAttribute('fetchpriority', 'high');
-      } else {
-        // Lazy load the rest
-        img.loading = 'lazy';
-      }
-
+      if(index===0){img.loading='eager'; img.setAttribute('fetchpriority','high');}
+      else img.loading='lazy';
       img.onerror = () => handleImageError(img); 
       div.appendChild(img);
     });
 
+    // Summary
     const p = document.createElement('p'); 
     p.className = 'post-text';
     const text = (post.summary || post.excerpt || '').trim(); 
@@ -233,6 +172,7 @@ function renderPosts(posts){
     p.appendChild(readMore); 
     div.appendChild(p);
 
+    // Date
     const d = document.createElement('div'); 
     d.className = 'date'; 
     d.textContent = post.date ? timeAgo(post.date) : ''; 
@@ -252,7 +192,7 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{
   });
 });
 
-// Initial load & auto-refresh every 30s
+// Initial load + auto-refresh every 30s
 (async()=>{
   const posts = await loadPosts();
   renderPosts(posts);
@@ -261,12 +201,11 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{
     renderPosts(p);
   },30000);
 })();
-</script>
-  <script>
-  if (typeof navigator.serviceWorker !== 'undefined') {
-    navigator.serviceWorker.register('/sw.js');
-  }
-  </script>
 
+// Service worker
+if (typeof navigator.serviceWorker !== 'undefined') {
+  navigator.serviceWorker.register('/sw.js');
+}
+</script>
 </body>
 </html>
