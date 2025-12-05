@@ -114,7 +114,7 @@
         title.appendChild(titleAnchor);
         div.appendChild(title);
 
-        // Images: YouTube first, content image second, featured image last
+        // Prepare image array: YouTube thumbnail > post image > featured image
         const images = [];
         if(post.link){
           const ytMatch = post.link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
@@ -128,19 +128,29 @@
         uniqueImages.forEach(imgPath => {
           if(!imgPath) return;
           const img = document.createElement('img');
+
           const widthDisplay = 543;
-          const heightDisplay = 293;
-          const originalPath = fixPath(imgPath, 'image');
-          const smallPath = originalPath.replace(/(\.[a-z]+)$/i, '-543w$1');
+          const heightDisplay = 305;
+
+          let originalPath = fixPath(imgPath, 'image');
+
+          // Auto-generate smaller WebP versions using Blogger's sizing
+          let smallPath = originalPath.replace(/\/s\d+\//, '/s543/').replace(/\.(jpg|jpeg|png)$/i, '.webp');
+          let largePath = originalPath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+
+          // Fallback for images without /sXXX/ in URL
+          if(!smallPath.includes('/s')) smallPath += '?format=webp';
+          if(!largePath.includes('/s')) largePath += '?format=webp';
 
           img.src = smallPath;
-          img.srcset = `${smallPath} 543w, ${originalPath} 1280w`;
+          img.srcset = `${smallPath} 543w, ${largePath} 1280w`;
           img.sizes = '(max-width: 600px) 100vw, 543px';
+
           img.width = widthDisplay;
           img.height = heightDisplay;
           img.style.width = '100%';
           img.style.height = 'auto';
-          img.alt = postTitle + " – image";
+          img.alt = `${postTitle} – image`;
           img.loading = 'lazy';
           img.fetchPriority = 'high';
           img.style.borderRadius = '8px';
