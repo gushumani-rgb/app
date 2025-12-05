@@ -79,18 +79,19 @@ function handleImageError(img){
   img.alt='no image';
 }
 
-// Extract YouTube ID from URL
+// Extract YouTube ID from any type of URL (embed, watch, short)
 function getYouTubeId(link){
   if(!link) return null;
   try {
-    const cleanLink = link.split(/[?&]/)[0];
-    let videoId = null;
-    if(cleanLink.includes('youtu.be/')) videoId = cleanLink.split('youtu.be/')[1];
-    else if(cleanLink.includes('youtube.com/watch')){
+    let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
+    if(match) return match[1];
+    match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+    if(match) return match[1];
+    if(link.includes('youtube.com/watch')){
       const urlParams = new URLSearchParams(link.split('?')[1] || '');
-      videoId = urlParams.get('v');
+      return urlParams.get('v');
     }
-    return videoId;
+    return null;
   } catch(e){
     return null;
   }
@@ -114,7 +115,6 @@ function renderPosts(posts){
   const container = document.getElementById('posts'); 
   container.innerHTML = posts.length ? '' : 'No posts yet.';
 
-  // Sort posts by date descending
   posts.sort((a,b)=>new Date(b.date) - new Date(a.date));
 
   posts.forEach(post => {
@@ -131,12 +131,8 @@ function renderPosts(posts){
 
     // Auto-detect YouTube thumbnail
     let youtubeThumbnail = null;
-    if(post.youtubeId){
-      youtubeThumbnail = `https://img.youtube.com/vi/${post.youtubeId}/hqdefault.jpg`;
-    } else if(post.link){
-      const id = getYouTubeId(post.link);
-      youtubeThumbnail = id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
-    }
+    const videoId = post.youtubeId || getYouTubeId(post.link);
+    if(videoId) youtubeThumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
     // Images: YouTube thumbnail > post.image > featuredImage
     const images = [
