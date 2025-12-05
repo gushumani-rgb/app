@@ -62,7 +62,7 @@ function makeLink(href,title){
 
 function handleImageError(img){
   img.onerror=null;
-  img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>');
+  img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>');
   img.alt='no image';
 }
 
@@ -111,8 +111,14 @@ function renderPosts(posts){
       img.src = src; 
       img.alt = titleText; 
       img.loading = 'lazy'; 
-      img.style.width = '100%';    // responsive width
-      img.style.height = 'auto';   // maintain aspect ratio
+
+      // Explicit width and height
+      img.width = 500;   
+      img.height = 200;  
+
+      // Responsive styling
+      img.style.width = '100%';    
+      img.style.height = 'auto';   
       img.onerror = () => handleImageError(img); 
       div.appendChild(img);
     });
