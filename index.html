@@ -19,20 +19,20 @@
 </style>
 </head>
 <body>
-  <header class="wrap" role="banner" aria-label="Site header">
-    <h1 id="site-title">Anywhere Income</h1>
-  </header>
+<header class="wrap" role="banner" aria-label="Site header">
+  <h1 id="site-title">Anywhere Income</h1>
+</header>
 
-  <main id="maincontent" role="main" tabindex="-1">
-    <div class="wrap">
-      <input id="jsonFilter" class="search" placeholder="Filter posts...">
-      <div id="posts">Loading posts...</div>
-    </div>
-  </main>
+<main id="maincontent" role="main" tabindex="-1">
+  <div class="wrap">
+    <input id="jsonFilter" class="search" placeholder="Filter posts...">
+    <div id="posts">Loading posts...</div>
+  </div>
+</main>
 
-  <footer class="wrap" role="contentinfo" aria-label="Site footer" style="text-align:center;padding:12px;color:#4a5568;">
-    <small>&copy; <span id="year"></span> Anywhere Income</small>
-  </footer>
+<footer class="wrap" role="contentinfo" aria-label="Site footer" style="text-align:center;padding:12px;color:#4a5568;">
+  <small>&copy; <span id="year"></span> Anywhere Income</small>
+</footer>
 
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
@@ -49,29 +49,59 @@ async function loadPosts(){
 }
 
 function renderPosts(posts){
-  const container=document.getElementById('posts'); container.innerHTML=posts.length?'':'No posts yet.';
+  const container=document.getElementById('posts'); 
+  container.innerHTML=posts.length?'':'No posts yet.';
+
   posts.forEach(post=>{
-    const div=document.createElement('div'); div.className='post';
+    const div=document.createElement('div'); 
+    div.className='post';
+
     const titleText=post.title?.trim()||'Untitled';
     const link=post.link||fixPath(post.content_file||post.path,'post')||'#';
-    const h2=document.createElement('h2'); h2.appendChild(makeLink(link,titleText)); div.appendChild(h2);
 
+    // Title
+    const h2=document.createElement('h2'); 
+    h2.appendChild(makeLink(link,titleText)); 
+    div.appendChild(h2);
+
+    // Images
     const images=[getYouTubeThumbnail(post.link),post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean);
     [...new Set(images)].forEach(src=>{
-      const img=document.createElement('img'); img.src=src; img.alt=titleText; img.loading='lazy'; handleImageError(img); div.appendChild(img);
+      const img=document.createElement('img'); 
+      img.src=src; 
+      img.alt=titleText; 
+      img.loading='lazy'; 
+      handleImageError(img); 
+      div.appendChild(img);
     });
 
-    const p=document.createElement('p'); p.className='post-text';
-    const text=(post.summary||post.excerpt||'').trim(); const maxLength=200;
+    // Excerpt
+    const p=document.createElement('p'); 
+    p.className='post-text';
+    const text=(post.summary||post.excerpt||'').trim(); 
+    const maxLength=200;
     p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text;
-    const readMore=makeLink(link,'Read more'); readMore.className='read-more'; p.appendChild(readMore); div.appendChild(p);
 
-    const d=document.createElement('div'); d.className='date'; d.textContent=post.date?timeAgo(post.date):''; div.appendChild(d);
+    // Read More link (visible text "Read more", aria-label descriptive)
+    const readMore = makeLink(link, 'Read more');
+    readMore.className = 'read-more';
+    readMore.setAttribute('aria-label', `Read more about "${titleText}"`);
+    p.appendChild(readMore); 
+    div.appendChild(p);
+
+    // Date
+    const d=document.createElement('div'); 
+    d.className='date'; 
+    d.textContent=post.date?timeAgo(post.date):''; 
+    div.appendChild(d);
 
     container.appendChild(div);
   });
 
-  Array.from(container.children).sort((a,b)=> new Date(b.querySelector('.date').textContent)-new Date(a.querySelector('.date').textContent)).forEach(n=>container.appendChild(n));
+  // Sort by date
+  Array.from(container.children)
+    .sort((a,b)=> new Date(b.querySelector('.date').textContent)-new Date(a.querySelector('.date').textContent))
+    .forEach(n=>container.appendChild(n));
 }
 
 // Filter
