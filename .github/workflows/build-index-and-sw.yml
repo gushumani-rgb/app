@@ -33,7 +33,6 @@ jobs:
           pip install beautifulsoup4 pyyaml python-dateutil pytz
 
       - name: Build index.json
-        id: build_index
         run: |
           python - <<'PY'
           import os, json, re
@@ -127,6 +126,7 @@ jobs:
                           ptag = soup2.find('p')
                           meta['excerpt'] = ptag.get_text(strip=True)[:300] if ptag else ''
 
+                      # --- Featured / Image ---
                       meta['featuredImage'] = None
                       meta['image'] = None
 
@@ -217,20 +217,7 @@ jobs:
           print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
           PY
 
-      - name: Commit index.json if changed
-        id: commit_index
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add index.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Update index.json [skip ci]"
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-
-      - name: Build sw.js only if index.json changed
-        if: steps.commit_index.outputs.changed == 'true'
+      - name: Build service worker (sw.js)
         run: |
           python - <<'PY'
           import json, os
@@ -241,16 +228,27 @@ jobs:
           sw_path = root / "sw.js"
 
           PRECACHE = set(["/", "/index.json"])
-          data = json.loads(index_path.read_text(encoding="utf-8"))
+
+          try:
+              data = json.loads(index_path.read_text(encoding="utf-8"))
+          except:
+              data = []
+
           for post in data:
               p = post.get("path")
-              if p and not p.startswith("/"):
-                  p = "/" + p
-              PRECACHE.add(p)
+              if p:
+                  if not p.startswith("/"):
+                      p = "/" + p
+                  PRECACHE.add(p)
               img = post.get("featuredImage") or post.get("image")
               if img:
-                  PRECACHE.add(img)
+                  if img.startswith("/"):
+                      PRECACHE.add(img)
+                  else:
+                      PRECACHE.add(img)
+
           precache_list = sorted(list(PRECACHE))
+
           sw_content = f"""
           const CACHE_NAME = 'site-cache-v1';
           const PRECACHE = {json.dumps(precache_list, indent=2)};
@@ -273,9 +271,15 @@ jobs:
           print(f"Written {sw_path} with {len(precache_list)} entries.")
           PY
 
-      - name: Commit and push changes
-        if: steps.commit_index.outputs.changed == 'true'
+      - name: Commit and push if changes
         run: |
-          git add sw.js
-          git pull --rebase origin main
-          git push origin main
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add index.json sw.js
+          # Check if there are changes
+          if ! git diff --cached --quiet; then
+            git commit -m "Update index.json and sw.js [skip ci]"
+            git pull --rebase origin main
+            git push origin main
+          else
+            echo "No changes to commit."
