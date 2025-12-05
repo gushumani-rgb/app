@@ -1,4 +1,4 @@
-name: Build index JSON
+name: Build index JSON & service worker
 
 on:
   push:
@@ -67,7 +67,7 @@ jobs:
               return {}, text
 
           def extract_youtube_thumbnail(text):
-              urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
+              urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
               if urls:
                   video_id = urls[0][1]
                   return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
@@ -106,7 +106,7 @@ jobs:
                               meta.setdefault('tags', [t.strip() for t in kw['content'].split(',') if t.strip()])
 
                       if not meta.get('title'):
-                          m = re.search(r'^\s*#\s+(.+)$', body, re.MULTILINE)
+                          m = re.search(r'^\\s*#\\s+(.+)$', body, re.MULTILINE)
                           meta['title'] = m.group(1).strip() if m else p.stem
 
                       if not meta.get('excerpt'):
@@ -136,15 +136,15 @@ jobs:
                       # Tags and categories
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
                       if isinstance(tags, str):
-                          tags = [t.strip() for t in re.split(r'[,\s]+', tags) if t.strip()]
+                          tags = [t.strip() for t in re.split(r'[,\\s]+', tags) if t.strip()]
                       categories = meta.get('categories') or meta.get('category') or []
                       if isinstance(categories, str):
-                          categories = [t.strip() for t in re.split(r'[,\s]+', categories) if t.strip()]
+                          categories = [t.strip() for t in re.split(r'[,\\s]+', categories) if t.strip()]
 
                       # Reading time
                       text_only = re.sub(r'<[^>]+>', '', body)
-                      text_only = re.sub(r'[`*_>#~\-]{1,}', ' ', text_only)
-                      words = len(re.findall(r'\w+', text_only))
+                      text_only = re.sub(r'[`*_>#~\\-]{1,}', ' ', text_only)
+                      words = len(re.findall(r'\\w+', text_only))
                       reading_time = max(1, int(round(words / 200))) if words > 0 else 1
 
                       rel = p.relative_to(root).as_posix()
@@ -215,10 +215,114 @@ jobs:
           print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
           PY
 
-      - name: Commit and push JSON
+      - name: Build service worker (sw.js)
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          root = Path.cwd()
+          index_path = root / os.environ.get("INDEX_PATH", "index.json")
+          sw_path = root / "sw.js"
+
+          PRECACHE = set()
+          # always precache root and index.json
+          PRECACHE.update(["/", "/index.json"])
+
+          try:
+              data = json.loads(index_path.read_text(encoding="utf-8"))
+          except Exception:
+              data = []
+
+          for post in data:
+              # add post path (only if it looks like a site-relative path)
+              p = post.get("path")
+              if p:
+                  # normalize: ensure it starts with single leading slash
+                  if not p.startswith("/"):
+                      p = "/" + p
+                  PRECACHE.add(p)
+              # add same-origin featured images (simple heuristic)
+              img = post.get("featuredImage") or post.get("image")
+              if img:
+                  if img.startswith("/"):
+                      PRECACHE.add(img)
+                  else:
+                      # include full URL if same origin or http(s) - keep, but may be cross-origin
+                      PRECACHE.add(img)
+
+          # ensure unique and sorted for deterministic output
+          precache_list = sorted(list(PRECACHE))
+
+          sw_content = f"""
+          // Auto-generated service worker - safe simple precache
+          const CACHE_NAME = 'site-cache-v1';
+          const PRECACHE = {json.dumps(precache_list, indent=2)};
+
+          // Install: cache known resources
+          self.addEventListener('install', event => {{
+            self.skipWaiting();
+            event.waitUntil(
+              caches.open(CACHE_NAME).then(cache => {{
+                return cache.addAll(PRECACHE.map(u => new Request(u, {{credentials: 'same-origin'}}))).catch(err => {{
+                  // In case of any failures, still continue
+                  console.warn('Some resources failed to cache during install:', err);
+                }});
+              }})
+            );
+          }});
+
+          // Activate: remove old caches
+          self.addEventListener('activate', event => {{
+            event.waitUntil(
+              caches.keys().then(keys => Promise.all(
+                keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+              )).then(() => self.clients.claim())
+            );
+          }});
+
+          // Fetch: navigation -> network-first, others -> cache-first fallback to network
+          self.addEventListener('fetch', event => {{
+            const req = event.request;
+            if (req.method !== 'GET') return;
+            // navigation request handling
+            if (req.mode === 'navigate') {{
+              event.respondWith(
+                fetch(req).then(res => {{
+                  // update cache for navigation responses
+                  const copy = res.clone();
+                  caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+                  return res;
+                }}).catch(() => caches.match('/').then(r => r))
+              );
+              return;
+            }}
+
+            // non-navigation: try cache first
+            event.respondWith(
+              caches.match(req).then(cached => cached || fetch(req).then(networkRes => {{
+                // optionally cache fetched network resources (same-origin)
+                try {{
+                  if (new URL(req.url).origin === location.origin) {{
+                    const copy = networkRes.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+                  }}
+                }} catch(e) {{
+                  // ignore
+                }}
+                return networkRes;
+              }})).catch(() => caches.match('/'))
+            );
+          }});
+          """
+          sw_path.write_text(sw_content, encoding="utf-8")
+          print(f"Written {sw_path} with {len(precache_list)} precached entries.")
+          PY
+
+      - name: Commit and push JSON + sw.js
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add index.json
-          git commit -m "Update index.json [skip ci]" || echo "Nothing to commit"
+          git add index.json sw.js
+          git commit -m "Update index.json and sw.js [skip ci]" || echo "Nothing to commit"
           git push origin main
