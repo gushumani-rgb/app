@@ -26,18 +26,7 @@
     a{color:var(--accent);text-decoration:none;}
     a:hover{text-decoration:underline;}
     .read-more{display:inline-block;margin-top:6px;color:var(--accent);font-size:14px;}
-    .skip-link {
-      position: absolute;
-      top: -40px;
-      left: 8px;
-      background: #000;
-      color: #fff;
-      padding: 8px 12px;
-      z-index: 1000;
-      border-radius: 4px;
-      text-decoration: none;
-      font-size: 14px;
-    }
+    .skip-link {position:absolute;top:-40px;left:8px;background:#000;color:#fff;padding:8px 12px;z-index:1000;border-radius:4px;text-decoration:none;font-size:14px;}
     .skip-link:focus { top: 8px; }
     .sr-only { position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px, 1px, 1px, 1px); white-space:nowrap; }
   </style>
@@ -94,6 +83,22 @@
       return a;
     }
 
+    // Central fallback image
+    function handleImageError(img) {
+      img.onerror = null;
+      img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120">' +
+        '<rect width="100%" height="100%" fill="#eceff6"/>' +
+        '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text>' +
+        '</svg>'
+      );
+      img.alt = "no image available";
+      img.width = 200;
+      img.height = 120;
+      img.style.width = '100%';
+      img.style.height = 'auto';
+    }
+
     function renderPosts(posts) {
       const container = document.getElementById('posts');
       container.innerHTML = posts.length ? '' : 'No posts yet.';
@@ -102,36 +107,27 @@
         const div = document.createElement('div');
         div.className = 'post';
 
-        const postTitle = post.title && post.title.trim() ? post.title.trim() : (post.link || post.path ? (post.link || post.path) : 'Untitled');
-
-        // Title
-        const title = document.createElement('h2');
+        const postTitle = post.title?.trim() || post.link || post.path || 'Untitled';
         const titleHref = post.link || fixPath(post.content_file || post.path, 'post') || '#';
+        const title = document.createElement('h2');
         const titleAnchor = makePostLink(titleHref, postTitle);
-        titleAnchor.textContent = post.title || 'Untitled';
+        titleAnchor.textContent = postTitle;
         title.appendChild(titleAnchor);
         div.appendChild(title);
 
-        // Images logic: YouTube first, first content image second, featured image last
+        // Images: YouTube first, content image second, featured image last
         const images = [];
-
-        // 1. YouTube thumbnail
         if(post.link){
           const ytMatch = post.link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
-          if(ytMatch){
-            images.push(`https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`);
-          }
+          if(ytMatch) images.push(`https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`);
         }
-
-        // 2. First image in content
         if(post.image) images.push(post.image);
-
-        // 3. Featured image last
         if(post.featuredImage) images.push(post.featuredImage);
 
-        images.forEach(imgPath => {
-          if(!imgPath) return;
+        const uniqueImages = [...new Set(images)];
 
+        uniqueImages.forEach(imgPath => {
+          if(!imgPath) return;
           const img = document.createElement('img');
           const widthDisplay = 543;
           const heightDisplay = 293;
@@ -145,25 +141,12 @@
           img.height = heightDisplay;
           img.style.width = '100%';
           img.style.height = 'auto';
-          img.alt = post.title ? post.title + " – image" : "Post image";
+          img.alt = postTitle + " – image";
           img.fetchPriority = "high";
           img.style.borderRadius = '8px';
           img.style.marginBottom = '8px';
 
-          img.onerror = function() {
-            this.onerror = null;
-            this.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-              '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120">' +
-              '<rect width="100%" height="100%" fill="#eceff6"/>' +
-              '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text>' +
-              '</svg>'
-            );
-            this.alt = "no image available";
-            this.width = 200;
-            this.height = 120;
-            this.style.width = '100%';
-            this.style.height = 'auto';
-          };
+          handleImageError(img);
 
           const imgLink = makePostLink(titleHref, postTitle);
           imgLink.appendChild(img);
@@ -171,14 +154,14 @@
         });
 
         // Summary + Read More
-        if (post.summary || post.excerpt) {
+        if(post.summary || post.excerpt){
           const p = document.createElement('p');
           p.className = 'post-text';
-          const text = (post.summary || post.excerpt || '').trim();
+          const text = (post.summary || post.excerpt).trim();
           const maxLength = 200;
 
           if(text.length > maxLength){
-            p.textContent = text.slice(0, maxLength) + '… ';
+            p.textContent = text.slice(0,maxLength)+'… ';
             const readMore = makePostLink(titleHref, postTitle);
             readMore.textContent = `Read more about "${postTitle}"`;
             readMore.className = 'read-more';
@@ -194,7 +177,6 @@
             readMore.setAttribute('aria-label', `Open full post ${postTitle}`);
             p.appendChild(readMore);
           }
-
           div.appendChild(p);
         } else {
           const direct = makePostLink(titleHref, postTitle);
