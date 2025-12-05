@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Anywhere Income – Work from Anywhere & Earn Online in 2025</title>
-  <meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly.">
+  <meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly." />
   <link rel="preload" as="fetch" href="index.json" crossorigin="anonymous">
   <link href='https://app-a24.pages.dev/manifest.json' rel='manifest'/>
   <style>
@@ -26,7 +26,6 @@
     a{color:var(--accent);text-decoration:none;}
     a:hover{text-decoration:underline;}
     .read-more{display:inline-block;margin-top:6px;color:var(--accent);font-size:14px;}
-
     .skip-link {
       position: absolute;
       top: -40px;
@@ -114,36 +113,24 @@
         div.appendChild(title);
 
         // Featured Image or YouTube Thumbnail
-        let imagePath = null;
-        let isYoutube = false;
-
-        if (post.featuredImage || post.image) {
-          imagePath = fixPath(post.featuredImage || post.image, 'image');
-        } else if (post.youtube || post.video) {
-          const ytUrl = post.youtube || post.video;
-          const match = ytUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);
-          if (match && match[1]) {
-            const videoId = match[1];
+        let imagePath = post.featuredImage || post.image;
+        if (!imagePath && post.link) {
+          const ytMatch = post.link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
+          if (ytMatch) {
+            const videoId = ytMatch[1];
             imagePath = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-            isYoutube = true;
           }
         }
 
         if (imagePath) {
           const img = document.createElement('img');
-
           const widthDisplay = 543;
           const heightDisplay = 293;
+          const originalPath = fixPath(imagePath, 'image');
+          const smallPath = originalPath.replace(/(\.[a-z]+)$/i, '-543w$1');
 
-          if (isYoutube) {
-            img.src = imagePath;
-            img.srcset = '';
-          } else {
-            const smallPath = imagePath.replace(/(\.[a-z]+)$/i, '-543w$1');
-            img.src = smallPath;
-            img.srcset = `${smallPath} 543w, ${imagePath} 800w`;
-          }
-
+          img.src = smallPath;
+          img.srcset = `${smallPath} 543w, ${originalPath} 800w`;
           img.sizes = '(max-width: 600px) 100vw, 543px';
           img.width = widthDisplay;
           img.height = heightDisplay;
@@ -171,7 +158,7 @@
 
           const imgLink = makePostLink(titleHref, postTitle);
           imgLink.appendChild(img);
-          div.insertBefore(imgLink, title.nextSibling);
+          div.insertBefore(imgLink, div.querySelector('h2').nextSibling);
         }
 
         // Summary + Read More
@@ -265,4 +252,4 @@
     setInterval(updateTimeAgoLabels,60000);
   </script>
 </body>
-  </html>
+</html>
