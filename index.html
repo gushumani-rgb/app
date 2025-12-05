@@ -111,6 +111,8 @@ function renderPosts(posts){
       img.src = src; 
       img.alt = titleText; 
       img.loading = 'lazy'; 
+      img.width = 800;    // set fixed width
+      img.height = 450;   // set fixed height (aspect ratio)
       img.onerror = () => handleImageError(img); 
       div.appendChild(img);
     });
