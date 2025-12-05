@@ -6,16 +6,66 @@
 <title>Anywhere Income – Work from Anywhere & Earn Online in 2025</title>
 <meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly.">
 <style>
-  body {margin:0;font-family:Arial,sans-serif;background:#f7f8fb;color:#4a5568;}
-  .wrap {max-width:800px;margin:36px auto;padding:20px;}
-  h1 {text-align:center;color:#0b63b8;margin-bottom:24px;}
-  .search {width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
-  .post {background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(11,63,120,0.06);}
-  .post h2 {margin:0 0 6px;font-size:16px;}
-  .post img {border-radius:8px;margin-bottom:8px;}
-  .post-text {font-size:14px;margin-bottom:8px;}
-  .read-more {display:inline-block;margin-top:6px;color:#0b63b8;font-size:14px;text-decoration:none;}
-  .date {font-size:12px;color:#1f2937;margin-top:8px;}
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f7f8fb;
+    color: #4a5568;
+  }
+  .wrap {
+    max-width: 800px;
+    margin: 36px auto;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    color: #0b63b8;
+    margin-bottom: 24px;
+  }
+  .search {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #e6eefb;
+    margin-bottom: 12px;
+  }
+  .post {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 6px 18px rgba(11,63,120,0.06);
+  }
+  .post h2 {
+    margin: 0 0 6px;
+    font-size: 16px;
+  }
+  .post img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 5 / 2; /* Prevent layout shifts */
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: block;
+    object-fit: cover;
+  }
+  .post-text {
+    font-size: 14px;
+    margin-bottom: 8px;
+    min-height: 80px; /* Reserve space for text */
+  }
+  .read-more {
+    display: inline-block;
+    margin-top: 6px;
+    color: #0b63b8;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .date {
+    font-size: 12px;
+    color: #1f2937;
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
@@ -88,7 +138,10 @@ function renderPosts(posts){
   const container = document.getElementById('posts'); 
   container.innerHTML = posts.length ? '' : 'No posts yet.';
 
-  let firstImageSet = false; // flag for first LCP image
+  // Sort posts BEFORE rendering to avoid layout shifts
+  posts.sort((a,b)=>new Date(b.date) - new Date(a.date));
+
+  let firstImageSet = false;
 
   posts.forEach(post => {
     const div = document.createElement('div'); 
@@ -97,61 +150,45 @@ function renderPosts(posts){
     const titleText = post.title?.trim() || 'Untitled';
     const link = post.link || fixPath(post.content_file || post.path, 'post') || '#';
 
-    // Title
     const h2 = document.createElement('h2'); 
     h2.appendChild(makeLink(link, titleText)); 
     div.appendChild(h2);
 
-    // Images
     const images = [
       getYouTubeThumbnail(post.link),
       post.image && fixPath(post.image, 'image'),
       post.featuredImage && fixPath(post.featuredImage, 'image')
     ].filter(Boolean);
+    
     [...new Set(images)].forEach(src => {
       const img = document.createElement('img'); 
       img.src = src; 
       img.alt = titleText; 
-
-      // Explicit width and height
-      img.width = 500;   
-      img.height = 200;  
-
-      // Responsive styling
-      img.style.width = '100%';    
-      img.style.height = 'auto';   
-      img.onerror = () => handleImageError(img); 
-
-      // Async decoding to improve download/render
       img.decoding = 'async';
 
       if(!firstImageSet){
-        // First image = LCP candidate
         img.loading = 'eager';
         img.setAttribute('fetchpriority', 'high');
         firstImageSet = true;
       } else {
-        // All other images lazy load
         img.loading = 'lazy';
       }
 
+      img.onerror = () => handleImageError(img); 
       div.appendChild(img);
     });
 
-    // Excerpt
     const p = document.createElement('p'); 
     p.className = 'post-text';
     const text = (post.summary || post.excerpt || '').trim(); 
     const maxLength = 200;
     p.textContent = text.length > maxLength ? text.slice(0, maxLength) + '… ' : text;
 
-    // Read More link
     const readMore = makeLink(link, `Read more about "${titleText}"`);
     readMore.className = 'read-more';
     p.appendChild(readMore); 
     div.appendChild(p);
 
-    // Date
     const d = document.createElement('div'); 
     d.className = 'date'; 
     d.textContent = post.date ? timeAgo(post.date) : ''; 
@@ -159,11 +196,6 @@ function renderPosts(posts){
 
     container.appendChild(div);
   });
-
-  // Sort by date
-  Array.from(container.children)
-    .sort((a, b) => new Date(b.querySelector('.date').textContent) - new Date(a.querySelector('.date').textContent))
-    .forEach(n => container.appendChild(n));
 }
 
 // Filter posts
