@@ -1,246 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anywhere Income – Work from Anywhere & Earn Online in 2025</title>
-  <meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly." />
-  <link rel="preload" as="fetch" href="index.json" crossorigin="anonymous">
-  <link href='https://app-a24.pages.dev/manifest.json' rel='manifest'/>
-  <style>
-    :root{
-      --bg:#f7f8fb; 
-      --card:#fff; 
-      --muted:#4a5568;
-      --accent:#0b63b8; 
-      --date:#1f2937;
-    }
-    html,body{height:100%;margin:0;background:var(--bg);font-family:Arial,sans-serif;}
-    .wrap{max-width:800px;margin:36px auto;padding:20px;}
-    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(11,63,120,0.06);overflow:hidden;margin-bottom:14px;}
-    .posts-list .post{border-radius:10px;padding:12px;border:1px solid #eef3fb;margin-bottom:12px;}
-    .posts-list .post h2{margin:0 0 6px;font-size:16px;}
-    .post-text{margin:0;color:var(--muted);font-size:14px;margin-bottom:8px;}
-    .date{font-size:12px;color:var(--date);margin-top:8px;}
-    .search{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
-    a{color:var(--accent);text-decoration:none;}
-    a:hover{text-decoration:underline;}
-    .read-more{display:inline-block;margin-top:6px;color:var(--accent);font-size:14px;}
-    .skip-link {position:absolute;top:-40px;left:8px;background:#000;color:#fff;padding:8px 12px;z-index:1000;border-radius:4px;text-decoration:none;font-size:14px;}
-    .skip-link:focus { top: 8px; }
-    .sr-only { position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px, 1px, 1px, 1px); white-space:nowrap; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anywhere Income – Work from Anywhere & Earn Online in 2025</title>
+<meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly.">
+<style>
+  body{margin:0;font-family:Arial,sans-serif;background:#f7f8fb;color:#4a5568;}
+  .wrap{max-width:800px;margin:36px auto;padding:20px;}
+  h1{text-align:center;color:#0b63b8;margin-bottom:24px;}
+  .search{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
+  .post{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(11,63,120,0.06);}
+  .post h2{margin:0 0 6px;font-size:16px;}
+  .post img{width:100%;height:auto;border-radius:8px;margin-bottom:8px;}
+  .post-text{font-size:14px;margin-bottom:8px;}
+  .read-more{display:inline-block;margin-top:6px;color:#0b63b8;font-size:14px;text-decoration:none;}
+  .date{font-size:12px;color:#1f2937;margin-top:8px;}
+</style>
 </head>
 <body>
-  <a class="skip-link" href="#maincontent">Skip to main content</a>
+<div class="wrap">
+  <h1>Anywhere Income</h1>
+  <input id="jsonFilter" class="search" placeholder="Filter posts...">
+  <div id="posts">Loading posts...</div>
+</div>
 
-  <header class="wrap" role="banner" aria-label="Site header">
-    <h1 id="site-title" style="text-align:center;margin-bottom:24px;color:var(--accent);">Anywhere Income</h1>
-  </header>
+<script>
+function fixPath(path,type='post'){if(!path) return ''; if(path.startsWith('http')||path.startsWith('/')) return path; return type==='image'?'Images/'+path:'Posts/'+path;}
+function timeAgo(dateStr){const d=new Date(dateStr),now=new Date(),diff=Math.floor((now-d)/1000);if(diff<60)return diff+' second'+(diff!==1?'s':'')+' ago'; if(diff<3600)return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; if(diff<86400)return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago';}
+function makeLink(href,title){const a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=title;return a;}
+function handleImageError(img){img.onerror=null;img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>');img.alt='no image';}
+function getYouTubeThumbnail(link){if(!link)return null;const m=link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);return m?'https://img.youtube.com/vi/'+m[1]+'/hqdefault.jpg':null;}
 
-  <main id="maincontent" role="main" aria-labelledby="site-title" class="wrap" tabindex="-1">
-    <div class="card" role="region" aria-label="Search posts">
-      <label for="jsonFilter" class="sr-only">Filter posts</label>
-      <input id="jsonFilter" class="search" placeholder="Filter posts..." />
-    </div>
+async function loadPosts(){
+  try{const res=await fetch('index.json',{cache:'no-cache'}); if(!res.ok)throw new Error('Failed to fetch index.json'); const data=await res.json(); return Array.isArray(data)?data:[];}
+  catch(e){console.warn('Error loading posts:',e);return [];}
+}
 
-    <div class="card" role="region" aria-label="Posts list">
-      <div id="posts" class="posts-list" aria-live="polite">Loading posts...</div>
-    </div>
-  </main>
+function renderPosts(posts){
+  const container=document.getElementById('posts'); container.innerHTML=posts.length?'':'No posts yet.';
+  posts.forEach(post=>{
+    const div=document.createElement('div'); div.className='post';
+    const titleText=post.title?.trim()||'Untitled';
+    const link=post.link||fixPath(post.content_file||post.path,'post')||'#';
+    const h2=document.createElement('h2'); h2.appendChild(makeLink(link,titleText)); div.appendChild(h2);
 
-  <footer class="wrap" role="contentinfo" aria-label="Site footer" style="text-align:center;padding:12px;color:var(--muted);">
-    <small>&copy; <span id="year"></span> Anywhere Income</small>
-  </footer>
-
-  <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
-
-    function fixPath(path, type='post') {
-      if (!path) return '';
-      path = path.trim();
-      if (path.startsWith('http') || path.startsWith('/')) return path;
-      return type === 'image' ? 'Images/' + path : 'Posts/' + path;
-    }
-
-    function timeAgo(dateStr) {
-      const date = new Date(dateStr);
-      const now = new Date();
-      const diff = Math.floor((now - date) / 1000);
-      if (diff < 60) return `${diff} second${diff !== 1 ? 's' : ''} ago`;
-      if (diff < 3600) return `${Math.floor(diff/60)} minute${Math.floor(diff/60)!==1?'s':''} ago`;
-      if (diff < 86400) return `${Math.floor(diff/3600)} hour${Math.floor(diff/3600)!==1?'s':''} ago`;
-      return `${Math.floor(diff/86400)} day${Math.floor(diff/86400)!==1?'s':''} ago`;
-    }
-
-    function makePostLink(href, titleText) {
-      const a = document.createElement('a');
-      a.href = href;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      const safeTitle = titleText && titleText.trim() ? titleText.trim() : '';
-      a.setAttribute('aria-label', safeTitle ? `Open post: ${safeTitle}` : `Open post`);
-      return a;
-    }
-
-    // Central fallback image
-    function handleImageError(img) {
-      img.onerror = null;
-      img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120">' +
-        '<rect width="100%" height="100%" fill="#eceff6"/>' +
-        '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text>' +
-        '</svg>'
-      );
-      img.alt = "no image available";
-      img.width = 200;
-      img.height = 120;
-      img.style.width = '100%';
-      img.style.height = 'auto';
-    }
-
-    function renderPosts(posts) {
-      const container = document.getElementById('posts');
-      container.innerHTML = posts.length ? '' : 'No posts yet.';
-
-      posts.forEach(post => {
-        const div = document.createElement('div');
-        div.className = 'post';
-
-        const postTitle = post.title?.trim() || post.link || post.path || 'Untitled';
-        const titleHref = post.link || fixPath(post.content_file || post.path, 'post') || '#';
-        const title = document.createElement('h2');
-        const titleAnchor = makePostLink(titleHref, postTitle);
-        titleAnchor.textContent = postTitle;
-        title.appendChild(titleAnchor);
-        div.appendChild(title);
-
-        // Images: YouTube first, content image second, featured image last
-        const images = [];
-        if(post.link){
-          const ytMatch = post.link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
-          if(ytMatch) images.push(`https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`);
-        }
-        if(post.image) images.push(post.image);
-        if(post.featuredImage) images.push(post.featuredImage);
-
-        const uniqueImages = [...new Set(images)];
-
-        uniqueImages.forEach(imgPath => {
-          if(!imgPath) return;
-          const img = document.createElement('img');
-          const widthDisplay = 543;
-          const heightDisplay = 293;
-          const originalPath = fixPath(imgPath, 'image');
-          const smallPath = originalPath.replace(/(\.[a-z]+)$/i, '-543w$1');
-
-          img.src = smallPath;
-          img.srcset = `${smallPath} 543w, ${originalPath} 800w`;
-          img.sizes = '(max-width: 600px) 100vw, 543px';
-          img.width = widthDisplay;
-          img.height = heightDisplay;
-          img.style.width = '100%';
-          img.style.height = 'auto';
-          img.alt = postTitle + " – image";
-          img.fetchPriority = "high";
-          img.style.borderRadius = '8px';
-          img.style.marginBottom = '8px';
-
-          handleImageError(img);
-
-          const imgLink = makePostLink(titleHref, postTitle);
-          imgLink.appendChild(img);
-          div.insertBefore(imgLink, div.querySelector('h2').nextSibling);
-        });
-
-        // Summary + Read More
-        if(post.summary || post.excerpt){
-          const p = document.createElement('p');
-          p.className = 'post-text';
-          const text = (post.summary || post.excerpt).trim();
-          const maxLength = 200;
-
-          if(text.length > maxLength){
-            p.textContent = text.slice(0,maxLength)+'… ';
-            const readMore = makePostLink(titleHref, postTitle);
-            readMore.textContent = `Read more about "${postTitle}"`;
-            readMore.className = 'read-more';
-            readMore.setAttribute('aria-label', `Read more about ${postTitle}`);
-            p.appendChild(readMore);
-          } else {
-            p.textContent = text;
-            const readMore = makePostLink(titleHref, postTitle);
-            readMore.textContent = `Open full post: "${postTitle}"`;
-            readMore.className = 'read-more';
-            readMore.style.display = 'inline-block';
-            readMore.style.marginLeft = '6px';
-            readMore.setAttribute('aria-label', `Open full post ${postTitle}`);
-            p.appendChild(readMore);
-          }
-          div.appendChild(p);
-        } else {
-          const direct = makePostLink(titleHref, postTitle);
-          direct.textContent = `Open post: "${postTitle}"`;
-          direct.className = 'read-more';
-          direct.style.display = 'inline-block';
-          div.appendChild(direct);
-        }
-
-        // Date
-        const d = document.createElement('div');
-        d.className = 'date';
-        d.setAttribute('data-date', post.date);
-        d.textContent = post.date ? timeAgo(post.date) : '';
-        div.appendChild(d);
-
-        container.appendChild(div);
-      });
-
-      // Sort by newest
-      Array.from(container.children)
-        .sort((a,b)=> new Date(b.querySelector('.date').dataset.date) - new Date(a.querySelector('.date').dataset.date))
-        .forEach(node => container.appendChild(node));
-    }
-
-    function updateTimeAgoLabels() {
-      document.querySelectorAll('.posts-list .post .date').forEach(d=>{
-        const dateStr = d.getAttribute('data-date');
-        if (!dateStr) return;
-        d.textContent = timeAgo(dateStr);
-      });
-    }
-
-    async function loadPosts() {
-      try {
-        const res = await fetch('index.json', {cache:'no-cache'});
-        if (!res.ok) throw new Error('Failed to fetch index.json');
-        const data = await res.json();
-        return Array.isArray(data) ? data : [];
-      } catch(e){
-        console.warn('Error loading posts:', e);
-        return [];
-      }
-    }
-
-    async function updateContent() {
-      const posts = await loadPosts();
-      renderPosts(posts);
-      updateTimeAgoLabels();
-    }
-
-    document.getElementById('jsonFilter').addEventListener('input',(e)=>{
-      const q = e.target.value.toLowerCase().trim();
-      Array.from(document.querySelectorAll('.posts-list .post')).forEach(node=>{
-        const title = node.querySelector('h2')?.innerText.toLowerCase() || '';
-        const excerpt = node.querySelector('p')?.innerText.toLowerCase() || '';
-        const path = node.querySelector('h2 a')?.getAttribute('href')?.toLowerCase() || '';
-        node.style.display = (!q || title.includes(q) || excerpt.includes(q) || path.includes(q))?'':'none';
-      });
+    const images=[getYouTubeThumbnail(post.link),post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean);
+    [...new Set(images)].forEach(src=>{
+      const img=document.createElement('img'); img.src=src; img.alt=titleText; img.loading='lazy'; handleImageError(img); div.appendChild(img);
     });
 
-    updateContent();
-    setInterval(updateContent,30000);
-    setInterval(updateTimeAgoLabels,60000);
-  </script>
+    const p=document.createElement('p'); p.className='post-text';
+    const text=(post.summary||post.excerpt||'').trim(); const maxLength=200;
+    p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text;
+    const readMore=makeLink(link,'Read more'); readMore.className='read-more'; p.appendChild(readMore); div.appendChild(p);
+
+    const d=document.createElement('div'); d.className='date'; d.textContent=post.date?timeAgo(post.date):''; div.appendChild(d);
+
+    container.appendChild(div);
+  });
+
+  Array.from(container.children).sort((a,b)=> new Date(b.querySelector('.date').textContent)-new Date(a.querySelector('.date').textContent)).forEach(n=>container.appendChild(n));
+}
+
+// Filter
+document.getElementById('jsonFilter').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase().trim();
+  Array.from(document.querySelectorAll('.post')).forEach(node=>{
+    const title=node.querySelector('h2')?.innerText.toLowerCase()||'';
+    const excerpt=node.querySelector('p')?.innerText.toLowerCase()||'';
+    node.style.display=!q||title.includes(q)||excerpt.includes(q)?'':'none';
+  });
+});
+
+// Initial load
+(async()=>{const posts=await loadPosts(); renderPosts(posts); setInterval(async()=>{const p=await loadPosts(); renderPosts(p);},30000);})();
+</script>
 </body>
 </html>
