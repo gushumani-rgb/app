@@ -43,7 +43,6 @@ jobs:
           from datetime import datetime, timezone, timedelta
 
           TZ_OFFSET = timezone(timedelta(hours=2))  # UTC+2
-
           root = Path.cwd()
           posts_root = root / os.environ.get("POSTS_DIR", "posts")
           index_path = root / os.environ.get("INDEX_PATH", "index.json")
@@ -80,12 +79,10 @@ jobs:
               return None
 
           def extract_youtube_thumbnail(text, link=None):
-              # If frontmatter contains a link, check it
               if link:
                   vid = extract_youtube_id(link)
                   if vid:
                       return f"https://img.youtube.com/vi/{vid}/hqdefault.jpg"
-              # Scan text for YouTube links
               urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
               if urls:
                   video_id = urls[0][1]
@@ -133,17 +130,14 @@ jobs:
                           ptag = soup2.find('p')
                           meta['excerpt'] = ptag.get_text(strip=True)[:300] if ptag else ''
 
-                      # --- Featured / Image ---
+                      # Featured / Image
                       meta['featuredImage'] = None
                       meta['image'] = None
-
-                      # YouTube first
                       yt_thumb = extract_youtube_thumbnail(body, meta.get('link'))
                       if yt_thumb:
                           meta['featuredImage'] = yt_thumb
                           meta['image'] = yt_thumb
                       else:
-                          # fallback to first image in content
                           soup2 = BeautifulSoup(body, 'html.parser')
                           img_tag = soup2.find('img')
                           if img_tag and img_tag.get('src'):
@@ -153,7 +147,6 @@ jobs:
                               meta['featuredImage'] = meta['featuredImage'].strip()
                               meta['image'] = meta['featuredImage']
 
-                      # Tags and categories
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
                       if isinstance(tags, str):
                           tags = [t.strip() for t in re.split(r'[,\\s]+', tags) if t.strip()]
@@ -161,7 +154,6 @@ jobs:
                       if isinstance(categories, str):
                           categories = [t.strip() for t in re.split(r'[,\\s]+', categories) if t.strip()]
 
-                      # Reading time
                       text_only = re.sub(r'<[^>]+>', '', body)
                       text_only = re.sub(r'[`*_>#~\-]{1,}', ' ', text_only)
                       words = len(re.findall(r'\w+', text_only))
@@ -179,7 +171,6 @@ jobs:
                       else:
                           slug = '/' + rel
 
-                      # --- Date parsing ---
                       dt_obj = None
                       if 'date' in meta and meta['date']:
                           try:
@@ -235,16 +226,18 @@ jobs:
           print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
           PY
 
-      - name: Build service worker (sw.js)
+      - name: Build service worker (sw.js) with prioritized recent images
         run: |
           python - <<'PY'
           import json, os
           from pathlib import Path
+          from dateutil import parser as dateparser
 
           root = Path.cwd()
           index_path = root / os.environ.get("INDEX_PATH", "index.json")
           sw_path = root / "sw.js"
 
+          PRIORITY_RECENT = 5  # Number of recent posts to prioritize
           PRECACHE = set()
           PRECACHE.update(["/", "/index.json"])
 
@@ -253,23 +246,39 @@ jobs:
           except Exception:
               data = []
 
-          for post in data:
+          def parse_date(item):
+              try:
+                  return dateparser.parse(item.get('date'))
+              except:
+                  return None
+
+          posts_sorted = sorted(data, key=parse_date, reverse=True)
+
+          # Recent posts first
+          for post in posts_sorted[:PRIORITY_RECENT]:
               p = post.get("path")
               if p:
                   if not p.startswith("/"):
                       p = "/" + p
                   PRECACHE.add(p)
-              img = post.get("featuredImage") or post.get("image")
-              if img:
-                  if img.startswith("/"):
-                      PRECACHE.add(img)
-                  else:
-                      PRECACHE.add(img)
+              for img in [post.get("featuredImage"), post.get("image")]:
+                  if img:
+                      PRECACHE.add(img.strip())
+
+          # Remaining posts
+          for post in posts_sorted[PRIORITY_RECENT:]:
+              p = post.get("path")
+              if p:
+                  if not p.startswith("/"):
+                      p = "/" + p
+                  PRECACHE.add(p)
+              for img in [post.get("featuredImage"), post.get("image")]:
+                  if img:
+                      PRECACHE.add(img.strip())
 
           precache_list = sorted(list(PRECACHE))
 
           sw_content = f"""
-          // Auto-generated service worker
           const CACHE_NAME = 'site-cache-v1';
           const PRECACHE = {json.dumps(precache_list, indent=2)};
 
@@ -277,9 +286,11 @@ jobs:
             self.skipWaiting();
             event.waitUntil(
               caches.open(CACHE_NAME).then(cache => {{
-                return cache.addAll(PRECACHE.map(u => new Request(u, {{credentials: 'same-origin'}}))).catch(err => {{
-                  console.warn('Some resources failed to cache:', err);
-                }});
+                return Promise.all(
+                  PRECACHE.map(u => cache.add(new Request(u, {{credentials: 'same-origin'}}))).catch(err => {{
+                    console.warn('Some resources failed to cache:', err);
+                  }})
+                );
               }})
             );
           }});
@@ -308,7 +319,8 @@ jobs:
             event.respondWith(
               caches.match(req).then(cached => cached || fetch(req).then(networkRes => {{
                 try {{
-                  if (new URL(req.url).origin === location.origin) {{
+                  const url = new URL(req.url);
+                  if (url.origin === location.origin || url.href.startsWith('http')) {{
                     const copy = networkRes.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
                   }}
@@ -319,14 +331,14 @@ jobs:
           }});
           """
           sw_path.write_text(sw_content, encoding="utf-8")
-          print(f"Written {sw_path} with {len(precache_list)} entries.")
+          print(f"Written {sw_path} with {len(precache_list)} entries, recent {PRIORITY_RECENT} prioritized.")
           PY
 
       - name: Commit and push JSON + sw.js
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+          git pull --rebase --autostash origin main
           git add index.json sw.js
           git commit -m "Update index.json and sw.js [skip ci]" || echo "Nothing to commit"
-          git pull --rebase origin main
           git push origin main
