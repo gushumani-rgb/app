@@ -122,10 +122,9 @@ function renderPosts(posts){
     const maxLength = 200;
     p.textContent = text.length > maxLength ? text.slice(0, maxLength) + '… ' : text;
 
-    // Read More link (short visible text + descriptive aria-label)
-    const readMore = makeLink(link, 'Read more');
+    // Read More link (visible descriptive text)
+    const readMore = makeLink(link, `Read more about "${titleText}"`);
     readMore.className = 'read-more';
-    readMore.setAttribute('aria-label', `Read more about "${titleText}"`);
     p.appendChild(readMore); 
     div.appendChild(p);
 
