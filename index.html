@@ -122,6 +122,9 @@ function renderPosts(posts){
       img.style.height = 'auto';   
       img.onerror = () => handleImageError(img); 
 
+      // Async decoding to improve download/render
+      img.decoding = 'async';
+
       if(!firstImageSet){
         // First image = LCP candidate
         img.loading = 'eager';
