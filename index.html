@@ -5,16 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anywhere Income – Work from Anywhere & Earn Online in 2025</title>
 <meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly.">
-<link rel="index" href="index.json" type="application/json">
-  <link rel="manifest" href="manifest.json">
-  <style>
+<style>
   body {margin:0;font-family:Arial,sans-serif;background:#f7f8fb;color:#4a5568;}
   .wrap {max-width:800px;margin:36px auto;padding:20px;}
   h1 {text-align:center;color:#0b63b8;margin-bottom:24px;}
   .search {width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
   .post {background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(11,63,120,0.06);}
   .post h2 {margin:0 0 6px;font-size:16px;}
-  .post img {width:100%;height:auto;border-radius:8px;margin-bottom:8px;}
+  .post img {border-radius:8px;margin-bottom:8px;}
   .post-text {font-size:14px;margin-bottom:8px;}
   .read-more {display:inline-block;margin-top:6px;color:#0b63b8;font-size:14px;text-decoration:none;}
   .date {font-size:12px;color:#1f2937;margin-top:8px;}
@@ -113,8 +111,8 @@ function renderPosts(posts){
       img.src = src; 
       img.alt = titleText; 
       img.loading = 'lazy'; 
-      img.width = 800;    // set fixed width
-      img.height = 450;   // set fixed height (aspect ratio)
+      img.style.width = '100%';    // responsive width
+      img.style.height = 'auto';   // maintain aspect ratio
       img.onerror = () => handleImageError(img); 
       div.appendChild(img);
     });
