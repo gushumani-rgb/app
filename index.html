@@ -46,7 +46,7 @@
     width: 100%;
     height: auto;
     aspect-ratio: 5 / 2;
-    min-height: 160px; /* Reserve space for images */
+    min-height: 160px;
     border-radius: 8px;
     margin-bottom: 8px;
     display: block;
@@ -55,7 +55,7 @@
   .post-text {
     font-size: 14px;
     margin-bottom: 8px;
-    min-height: 80px; /* Reserve space for text */
+    min-height: 80px;
   }
   .read-more {
     display: inline-block;
@@ -70,7 +70,6 @@
     margin-top: 8px;
   }
 
-  /* Skeleton Loader */
   .post-skeleton {
     background: #eceff6;
     border-radius: 12px;
@@ -85,7 +84,7 @@
   }
 
   #posts {
-    min-height: 500px; /* Reserve container height */
+    min-height: 500px;
   }
 </style>
 </head>
@@ -98,7 +97,6 @@
   <div class="wrap">
     <input id="jsonFilter" class="search" placeholder="Filter posts...">
     <div id="posts">
-      <!-- Skeleton loaders to prevent CLS -->
       <div class="post-skeleton"></div>
       <div class="post-skeleton"></div>
       <div class="post-skeleton"></div>
@@ -142,10 +140,18 @@ function handleImageError(img){
   img.alt='no image';
 }
 
+// YouTube thumbnail extraction
 function getYouTubeThumbnail(link){
   if(!link) return null;
-  const m=link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
-  return m?'https://img.youtube.com/vi/'+m[1]+'/hqdefault.jpg':null;
+  try {
+    const url = new URL(link, window.location.origin);
+    let videoId = null;
+    if(url.hostname.includes('youtu.be')) videoId = url.pathname.slice(1);
+    else if(url.hostname.includes('youtube.com')) videoId = url.searchParams.get('v');
+    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+  } catch(e){
+    return null;
+  }
 }
 
 async function loadPosts(){
@@ -164,10 +170,7 @@ function renderPosts(posts){
   const container = document.getElementById('posts'); 
   container.innerHTML = posts.length ? '' : 'No posts yet.';
 
-  // Sort posts BEFORE rendering to avoid layout shifts
   posts.sort((a,b)=>new Date(b.date) - new Date(a.date));
-
-  let firstImageSet = false;
 
   posts.forEach(post => {
     const div = document.createElement('div'); 
@@ -180,29 +183,28 @@ function renderPosts(posts){
     h2.appendChild(makeLink(link, titleText)); 
     div.appendChild(h2);
 
+    // Determine images: normal images first, then YouTube thumbnail if no image exists
     const images = [
-      getYouTubeThumbnail(post.link),
       post.image && fixPath(post.image, 'image'),
-      post.featuredImage && fixPath(post.featuredImage, 'image')
+      post.featuredImage && fixPath(post.featuredImage, 'image'),
+      getYouTubeThumbnail(post.link)
     ].filter(Boolean);
+
+    const uniqueImages = [...new Set(images)];
     
-    [...new Set(images)].forEach(src => {
-      const img = document.createElement('img'); 
-      img.src = src; 
-      img.alt = titleText; 
+    // If no images, add placeholder to trigger handleImageError
+    if(uniqueImages.length === 0) uniqueImages.push('');
+
+    uniqueImages.forEach((src,index)=>{
+      const img = document.createElement('img');
+      img.src = src || ''; // empty string triggers onerror
+      img.alt = titleText;
       img.decoding = 'async';
       img.width = 500;
       img.height = 200;
-
-      if(!firstImageSet){
-        img.loading = 'eager';
-        img.setAttribute('fetchpriority', 'high');
-        firstImageSet = true;
-      } else {
-        img.loading = 'lazy';
-      }
-
-      img.onerror = () => handleImageError(img); 
+      img.loading = index === 0 ? 'eager' : 'lazy';
+      if(index === 0) img.setAttribute('fetchpriority','high');
+      img.onerror = () => handleImageError(img);
       div.appendChild(img);
     });
 
@@ -210,7 +212,7 @@ function renderPosts(posts){
     p.className = 'post-text';
     const text = (post.summary || post.excerpt || '').trim(); 
     const maxLength = 200;
-    p.textContent = text.length > maxLength ? text.slice(0, maxLength) + '… ' : text;
+    p.textContent = text.length > maxLength ? text.slice(0,maxLength)+'… ' : text;
 
     const readMore = makeLink(link, `Read more about "${titleText}"`);
     readMore.className = 'read-more';
@@ -226,7 +228,6 @@ function renderPosts(posts){
   });
 }
 
-// Filter posts
 document.getElementById('jsonFilter').addEventListener('input', e=>{
   const q = e.target.value.toLowerCase().trim();
   Array.from(document.querySelectorAll('.post')).forEach(node=>{
@@ -236,7 +237,6 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{
   });
 });
 
-// Initial load & auto-refresh every 30s
 (async()=>{
   const posts = await loadPosts();
   renderPosts(posts);
@@ -245,12 +245,11 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{
     renderPosts(p);
   },30000);
 })();
+
+if (typeof navigator.serviceWorker !== 'undefined') {
+  navigator.serviceWorker.register('/sw.js');
+}
 </script>
-  <script>
-  if (typeof navigator.serviceWorker !== 'undefined') {
-    navigator.serviceWorker.register('/sw.js');
-  }
-  </script>
 
 </body>
 </html>
