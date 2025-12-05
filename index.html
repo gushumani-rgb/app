@@ -6,16 +6,16 @@
 <title>Anywhere Income – Work from Anywhere & Earn Online in 2025</title>
 <meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly.">
 <style>
-  body{margin:0;font-family:Arial,sans-serif;background:#f7f8fb;color:#4a5568;}
-  .wrap{max-width:800px;margin:36px auto;padding:20px;}
-  h1{text-align:center;color:#0b63b8;margin-bottom:24px;}
-  .search{width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
-  .post{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(11,63,120,0.06);}
-  .post h2{margin:0 0 6px;font-size:16px;}
-  .post img{width:100%;height:auto;border-radius:8px;margin-bottom:8px;}
-  .post-text{font-size:14px;margin-bottom:8px;}
-  .read-more{display:inline-block;margin-top:6px;color:#0b63b8;font-size:14px;text-decoration:none;}
-  .date{font-size:12px;color:#1f2937;margin-top:8px;}
+  body {margin:0;font-family:Arial,sans-serif;background:#f7f8fb;color:#4a5568;}
+  .wrap {max-width:800px;margin:36px auto;padding:20px;}
+  h1 {text-align:center;color:#0b63b8;margin-bottom:24px;}
+  .search {width:100%;padding:8px;border-radius:8px;border:1px solid #e6eefb;margin-bottom:12px;}
+  .post {background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(11,63,120,0.06);}
+  .post h2 {margin:0 0 6px;font-size:16px;}
+  .post img {width:100%;height:auto;border-radius:8px;margin-bottom:8px;}
+  .post-text {font-size:14px;margin-bottom:8px;}
+  .read-more {display:inline-block;margin-top:6px;color:#0b63b8;font-size:14px;text-decoration:none;}
+  .date {font-size:12px;color:#1f2937;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -37,15 +37,51 @@
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
 
-function fixPath(path,type='post'){if(!path) return ''; if(path.startsWith('http')||path.startsWith('/')) return path; return type==='image'?'Images/'+path:'Posts/'+path;}
-function timeAgo(dateStr){const d=new Date(dateStr),now=new Date(),diff=Math.floor((now-d)/1000);if(diff<60)return diff+' second'+(diff!==1?'s':'')+' ago'; if(diff<3600)return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; if(diff<86400)return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago';}
-function makeLink(href,title){const a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=title;return a;}
-function handleImageError(img){img.onerror=null;img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>');img.alt='no image';}
-function getYouTubeThumbnail(link){if(!link)return null;const m=link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);return m?'https://img.youtube.com/vi/'+m[1]+'/hqdefault.jpg':null;}
+function fixPath(path,type='post'){
+  if(!path) return ''; 
+  if(path.startsWith('http')||path.startsWith('/')) return path; 
+  return type==='image'?'Images/'+path:'Posts/'+path;
+}
+
+function timeAgo(dateStr){
+  const d=new Date(dateStr), now=new Date(), diff=Math.floor((now-d)/1000);
+  if(diff<60) return diff+' second'+(diff!==1?'s':'')+' ago';
+  if(diff<3600) return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago';
+  if(diff<86400) return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago';
+  return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago';
+}
+
+function makeLink(href,title){
+  const a=document.createElement('a');
+  a.href=href;
+  a.target='_blank';
+  a.rel='noopener noreferrer';
+  a.textContent=title;
+  return a;
+}
+
+function handleImageError(img){
+  img.onerror=null;
+  img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>');
+  img.alt='no image';
+}
+
+function getYouTubeThumbnail(link){
+  if(!link) return null;
+  const m=link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
+  return m?'https://img.youtube.com/vi/'+m[1]+'/hqdefault.jpg':null;
+}
 
 async function loadPosts(){
-  try{const res=await fetch('index.json',{cache:'no-cache'}); if(!res.ok)throw new Error('Failed to fetch index.json'); const data=await res.json(); return Array.isArray(data)?data:[];}
-  catch(e){console.warn('Error loading posts:',e);return [];}
+  try{
+    const res=await fetch('index.json',{cache:'no-cache'});
+    if(!res.ok) throw new Error('Failed to fetch index.json');
+    const data=await res.json();
+    return Array.isArray(data)?data:[];
+  } catch(e){
+    console.warn('Error loading posts:',e);
+    return [];
+  }
 }
 
 function renderPosts(posts){
@@ -82,7 +118,7 @@ function renderPosts(posts){
     const maxLength=200;
     p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text;
 
-    // Read More link (visible text "Read more", aria-label descriptive)
+    // Read More link (descriptive)
     const readMore = makeLink(link, 'Read more');
     readMore.className = 'read-more';
     readMore.setAttribute('aria-label', `Read more about "${titleText}"`);
@@ -104,8 +140,8 @@ function renderPosts(posts){
     .forEach(n=>container.appendChild(n));
 }
 
-// Filter
-document.getElementById('jsonFilter').addEventListener('input',e=>{
+// Filter posts
+document.getElementById('jsonFilter').addEventListener('input', e=>{
   const q=e.target.value.toLowerCase().trim();
   Array.from(document.querySelectorAll('.post')).forEach(node=>{
     const title=node.querySelector('h2')?.innerText.toLowerCase()||'';
@@ -114,8 +150,15 @@ document.getElementById('jsonFilter').addEventListener('input',e=>{
   });
 });
 
-// Initial load
-(async()=>{const posts=await loadPosts(); renderPosts(posts); setInterval(async()=>{const p=await loadPosts(); renderPosts(p);},30000);})();
+// Initial load & auto-refresh every 30s
+(async()=>{
+  const posts=await loadPosts();
+  renderPosts(posts);
+  setInterval(async()=>{
+    const p=await loadPosts();
+    renderPosts(p);
+  },30000);
+})();
 </script>
 </body>
 </html>
