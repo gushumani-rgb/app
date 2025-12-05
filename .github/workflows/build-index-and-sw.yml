@@ -80,10 +80,12 @@ jobs:
               return None
 
           def extract_youtube_thumbnail(text, link=None):
+              # If frontmatter contains a link, check it
               if link:
                   vid = extract_youtube_id(link)
                   if vid:
                       return f"https://img.youtube.com/vi/{vid}/hqdefault.jpg"
+              # Scan text for YouTube links
               urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
               if urls:
                   video_id = urls[0][1]
@@ -98,14 +100,19 @@ jobs:
                       text = read_file(p)
                       meta = {}
                       body = text
+
+                      # File modified time fallback
                       try:
-                          mtime_dt = datetime.fromtimestamp(p.stat().st_mtime, tz=TZ_OFFSET)
-                      except:
+                          mtime_ts = p.stat().st_mtime
+                          mtime_dt = datetime.fromtimestamp(mtime_ts, tz=TZ_OFFSET)
+                      except Exception:
                           mtime_dt = datetime.now(TZ_OFFSET)
 
+                      # Parse front matter
                       if p.suffix.lower() in ('.md', '.markdown'):
                           fm, body = parse_front_matter(text)
-                          meta.update(fm or {})
+                          if fm:
+                              meta.update(fm or {})
                       else:
                           soup = BeautifulSoup(text, 'html.parser')
                           if soup.title and soup.title.string:
@@ -130,11 +137,13 @@ jobs:
                       meta['featuredImage'] = None
                       meta['image'] = None
 
+                      # YouTube first
                       yt_thumb = extract_youtube_thumbnail(body, meta.get('link'))
                       if yt_thumb:
                           meta['featuredImage'] = yt_thumb
                           meta['image'] = yt_thumb
                       else:
+                          # fallback to first image in content
                           soup2 = BeautifulSoup(body, 'html.parser')
                           img_tag = soup2.find('img')
                           if img_tag and img_tag.get('src'):
@@ -144,6 +153,7 @@ jobs:
                               meta['featuredImage'] = meta['featuredImage'].strip()
                               meta['image'] = meta['featuredImage']
 
+                      # Tags and categories
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
                       if isinstance(tags, str):
                           tags = [t.strip() for t in re.split(r'[,\\s]+', tags) if t.strip()]
@@ -151,6 +161,7 @@ jobs:
                       if isinstance(categories, str):
                           categories = [t.strip() for t in re.split(r'[,\\s]+', categories) if t.strip()]
 
+                      # Reading time
                       text_only = re.sub(r'<[^>]+>', '', body)
                       text_only = re.sub(r'[`*_>#~\-]{1,}', ' ', text_only)
                       words = len(re.findall(r'\w+', text_only))
@@ -168,6 +179,7 @@ jobs:
                       else:
                           slug = '/' + rel
 
+                      # --- Date parsing ---
                       dt_obj = None
                       if 'date' in meta and meta['date']:
                           try:
@@ -176,7 +188,7 @@ jobs:
                                   if not parsed.tzinfo:
                                       parsed = parsed.replace(tzinfo=timezone.utc)
                                   dt_obj = parsed.astimezone(TZ_OFFSET)
-                          except:
+                          except Exception:
                               dt_obj = None
 
                       if not dt_obj:
@@ -189,7 +201,7 @@ jobs:
                                       if not parsed.tzinfo:
                                           parsed = parsed.replace(tzinfo=timezone.utc)
                                       dt_obj = parsed.astimezone(TZ_OFFSET)
-                              except:
+                              except Exception:
                                   dt_obj = None
 
                       if not dt_obj:
@@ -212,7 +224,13 @@ jobs:
           if not posts:
               posts = [{"title": "No posts yet", "excerpt": "", "path": "/", "source": ""}]
 
-          posts_sorted = sorted(posts, key=lambda x: dateparser.parse(x.get('date', '1970-01-01T00:00:00')).timestamp(), reverse=True)
+          def sort_key(item):
+              try:
+                  return dateparser.parse(item.get('date')).timestamp()
+              except:
+                  return 0
+
+          posts_sorted = sorted(posts, key=sort_key, reverse=True)
           index_path.write_text(json.dumps(posts_sorted, indent=2, ensure_ascii=False), encoding='utf-8')
           print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
           PY
@@ -227,11 +245,12 @@ jobs:
           index_path = root / os.environ.get("INDEX_PATH", "index.json")
           sw_path = root / "sw.js"
 
-          PRECACHE = set(["/", "/index.json"])
+          PRECACHE = set()
+          PRECACHE.update(["/", "/index.json"])
 
           try:
               data = json.loads(index_path.read_text(encoding="utf-8"))
-          except:
+          except Exception:
               data = []
 
           for post in data:
@@ -250,36 +269,64 @@ jobs:
           precache_list = sorted(list(PRECACHE))
 
           sw_content = f"""
+          // Auto-generated service worker
           const CACHE_NAME = 'site-cache-v1';
           const PRECACHE = {json.dumps(precache_list, indent=2)};
+
           self.addEventListener('install', event => {{
             self.skipWaiting();
-            event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE.map(u => new Request(u, {{credentials: 'same-origin'}}))).catch(err => {{console.warn('Failed to cache:', err);}})));
+            event.waitUntil(
+              caches.open(CACHE_NAME).then(cache => {{
+                return cache.addAll(PRECACHE.map(u => new Request(u, {{credentials: 'same-origin'}}))).catch(err => {{
+                  console.warn('Some resources failed to cache:', err);
+                }});
+              }})
+            );
           }});
-          self.addEventListener('activate', event => {{event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim()));}});
+
+          self.addEventListener('activate', event => {{
+            event.waitUntil(
+              caches.keys().then(keys => Promise.all(
+                keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+              )).then(() => self.clients.claim())
+            );
+          }});
+
           self.addEventListener('fetch', event => {{
             const req = event.request;
-            if(req.method !== 'GET') return;
-            if(req.mode === 'navigate'){{
-              event.respondWith(fetch(req).then(r => {{caches.open(CACHE_NAME).then(c => c.put(req,r.clone())); return r;}}).catch(() => caches.match('/')));
+            if (req.method !== 'GET') return;
+            if (req.mode === 'navigate') {{
+              event.respondWith(
+                fetch(req).then(res => {{
+                  const copy = res.clone();
+                  caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+                  return res;
+                }}).catch(() => caches.match('/'))
+              );
               return;
             }}
-            event.respondWith(caches.match(req).then(cached => cached || fetch(req).then(r=>{{try{{if(new URL(req.url).origin===location.origin)caches.open(CACHE_NAME).then(c=>c.put(req,r.clone()));}}catch(e){{}} return r;}})).catch(()=>caches.match('/')));
+            event.respondWith(
+              caches.match(req).then(cached => cached || fetch(req).then(networkRes => {{
+                try {{
+                  if (new URL(req.url).origin === location.origin) {{
+                    const copy = networkRes.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+                  }}
+                }} catch(e) {{}}
+                return networkRes;
+              }})).catch(() => caches.match('/'))
+            );
           }});
           """
           sw_path.write_text(sw_content, encoding="utf-8")
           print(f"Written {sw_path} with {len(precache_list)} entries.")
           PY
 
-      - name: Commit and push if changes
+      - name: Commit and push JSON + sw.js
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add index.json sw.js
-          # Check if there are changes
-          if ! git diff --cached --quiet; then
-            git commit -m "Update index.json and sw.js [skip ci]"
-            git pull --rebase origin main
-            git push origin main
-          else
-            echo "No changes to commit."
+          git commit -m "Update index.json and sw.js [skip ci]" || echo "Nothing to commit"
+          git pull --rebase origin main
+          git push origin main
