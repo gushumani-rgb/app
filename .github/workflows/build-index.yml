@@ -66,6 +66,13 @@ jobs:
                           return {}, text
               return {}, text
 
+          def extract_youtube_thumbnail(text):
+              urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
+              if urls:
+                  video_id = urls[0][1]
+                  return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+              return None
+
           posts = []
 
           if posts_root.exists():
@@ -110,15 +117,21 @@ jobs:
                       # --- Featured / Image ---
                       meta['featuredImage'] = None
                       meta['image'] = None
+
                       if 'featuredImage' in meta and meta['featuredImage']:
                           meta['featuredImage'] = meta['featuredImage'].strip()
-                          meta['image'] = meta['featuredImage']  # mirror for compatibility
+                          meta['image'] = meta['featuredImage']
                       else:
                           soup2 = BeautifulSoup(body, 'html.parser')
                           img_tag = soup2.find('img')
                           if img_tag and img_tag.get('src'):
                               meta['featuredImage'] = img_tag['src'].strip()
                               meta['image'] = meta['featuredImage']
+                          else:
+                              yt_thumb = extract_youtube_thumbnail(body)
+                              if yt_thumb:
+                                  meta['featuredImage'] = yt_thumb
+                                  meta['image'] = yt_thumb
 
                       # Tags and categories
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
@@ -185,13 +198,12 @@ jobs:
                           'reading_time': reading_time,
                           'word_count': words,
                           'featuredImage': meta.get('featuredImage'),
-                          'image': meta.get('image')  # backward compatible
+                          'image': meta.get('image')
                       })
 
           if not posts:
               posts = [{"title": "No posts yet", "excerpt": "", "path": "/", "source": ""}]
 
-          # Sort posts by date descending
           def sort_key(item):
               try:
                   return dateparser.parse(item.get('date')).timestamp()
