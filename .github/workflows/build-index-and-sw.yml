@@ -32,7 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install beautifulsoup4 pyyaml python-dateutil pytz
 
-      - name: Build index.json with youtubeId
+      - name: Build index.json
         run: |
           python - <<'PY'
           import os, json, re
@@ -42,7 +42,7 @@ jobs:
           from dateutil import parser as dateparser
           from datetime import datetime, timezone, timedelta
 
-          TZ_OFFSET = timezone(timedelta(hours=2))
+          TZ_OFFSET = timezone(timedelta(hours=2))  # UTC+2
           root = Path.cwd()
           posts_root = root / os.environ.get("POSTS_DIR", "posts")
           index_path = root / os.environ.get("INDEX_PATH", "index.json")
@@ -82,12 +82,12 @@ jobs:
               if link:
                   vid = extract_youtube_id(link)
                   if vid:
-                      return f"https://img.youtube.com/vi/{vid}/hqdefault.jpg", vid
+                      return f"https://img.youtube.com/vi/{vid}/hqdefault.jpg"
               urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
               if urls:
                   video_id = urls[0][1]
-                  return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg", video_id
-              return None, None
+                  return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+              return None
 
           posts = []
 
@@ -98,12 +98,14 @@ jobs:
                       meta = {}
                       body = text
 
+                      # File modified time fallback
                       try:
                           mtime_ts = p.stat().st_mtime
                           mtime_dt = datetime.fromtimestamp(mtime_ts, tz=TZ_OFFSET)
                       except Exception:
                           mtime_dt = datetime.now(TZ_OFFSET)
 
+                      # Parse front matter
                       if p.suffix.lower() in ('.md', '.markdown'):
                           fm, body = parse_front_matter(text)
                           if fm:
@@ -128,21 +130,22 @@ jobs:
                           ptag = soup2.find('p')
                           meta['excerpt'] = ptag.get_text(strip=True)[:300] if ptag else ''
 
-                      # Images + YouTube thumbnail
+                      # Featured / Image
                       meta['featuredImage'] = None
                       meta['image'] = None
-                      thumb_url, yt_id = extract_youtube_thumbnail(body, meta.get('link'))
-                      if thumb_url:
-                          meta['featuredImage'] = thumb_url
-                          meta['image'] = thumb_url
+                      yt_thumb = extract_youtube_thumbnail(body, meta.get('link'))
+                      if yt_thumb:
+                          meta['featuredImage'] = yt_thumb
+                          meta['image'] = yt_thumb
                       else:
                           soup2 = BeautifulSoup(body, 'html.parser')
                           img_tag = soup2.find('img')
                           if img_tag and img_tag.get('src'):
                               meta['featuredImage'] = img_tag['src'].strip()
-                              meta['image'] = img_tag['src'].strip()
-
-                      meta['youtubeId'] = yt_id
+                              meta['image'] = meta['featuredImage']
+                          elif 'featuredImage' in meta and meta['featuredImage']:
+                              meta['featuredImage'] = meta['featuredImage'].strip()
+                              meta['image'] = meta['featuredImage']
 
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
                       if isinstance(tags, str):
@@ -178,6 +181,7 @@ jobs:
                                   dt_obj = parsed.astimezone(TZ_OFFSET)
                           except Exception:
                               dt_obj = None
+
                       if not dt_obj:
                           soup_date = BeautifulSoup(body, 'html.parser')
                           pdate = soup_date.find('p', class_='post-date')
@@ -190,6 +194,7 @@ jobs:
                                       dt_obj = parsed.astimezone(TZ_OFFSET)
                               except Exception:
                                   dt_obj = None
+
                       if not dt_obj:
                           dt_obj = mtime_dt
 
@@ -204,14 +209,19 @@ jobs:
                           'reading_time': reading_time,
                           'word_count': words,
                           'featuredImage': meta.get('featuredImage'),
-                          'image': meta.get('image'),
-                          'youtubeId': meta.get('youtubeId')
+                          'image': meta.get('image')
                       })
 
           if not posts:
               posts = [{"title": "No posts yet", "excerpt": "", "path": "/", "source": ""}]
 
-          posts_sorted = sorted(posts, key=lambda i: dateparser.parse(i.get('date') or ''), reverse=True)
+          def sort_key(item):
+              try:
+                  return dateparser.parse(item.get('date')).timestamp()
+              except:
+                  return 0
+
+          posts_sorted = sorted(posts, key=sort_key, reverse=True)
           index_path.write_text(json.dumps(posts_sorted, indent=2, ensure_ascii=False), encoding='utf-8')
           print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
           PY
@@ -236,22 +246,30 @@ jobs:
           except Exception:
               data = []
 
-          posts_sorted = sorted(data, key=lambda i: dateparser.parse(i.get('date') or ''), reverse=True)
+          def parse_date(item):
+              try:
+                  return dateparser.parse(item.get('date'))
+              except:
+                  return None
 
-          # Precache first PRIORITY_RECENT posts + their YouTube thumbnails
+          posts_sorted = sorted(data, key=parse_date, reverse=True)
+
           for post in posts_sorted[:PRIORITY_RECENT]:
               p = post.get("path")
               if p:
-                  PRECACHE.add(p if p.startswith("/") else "/" + p)
+                  if not p.startswith("/"):
+                      p = "/" + p
+                  PRECACHE.add(p)
               for img in [post.get("featuredImage"), post.get("image")]:
                   if img:
                       PRECACHE.add(img.strip())
 
-          # Remaining posts
           for post in posts_sorted[PRIORITY_RECENT:]:
               p = post.get("path")
               if p:
-                  PRECACHE.add(p if p.startswith("/") else "/" + p)
+                  if not p.startswith("/"):
+                      p = "/" + p
+                  PRECACHE.add(p)
               for img in [post.get("featuredImage"), post.get("image")]:
                   if img:
                       PRECACHE.add(img.strip())
@@ -318,9 +336,13 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+
+          # Ensure local branch matches remote
           git fetch origin main
           git reset --hard origin/main
+
           git add index.json sw.js
+
           if ! git diff --cached --quiet; then
             git commit -m "Update index.json and sw.js [skip ci]"
             git push origin main
