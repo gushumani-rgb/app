@@ -1,3 +1,4 @@
+
 // Auto-generated service worker
 const CACHE_NAME = 'site-cache-v1';
 const PRECACHE = [
@@ -26,76 +27,47 @@ const PRECACHE = [
   "https://img.youtube.com/vi/oLvMXuXa2G0/hqdefault.jpg"
 ];
 
-// INSTALL: Cache all the PRECACHE resources
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(PRECACHE.map(u => new Request(u, { credentials: 'same-origin' })))
-        .catch(err => console.warn('Some resources failed to cache:', err));
+      return cache.addAll(PRECACHE.map(u => new Request(u, {credentials: 'same-origin'}))).catch(err => {
+        console.warn('Some resources failed to cache:', err);
+      });
     })
   );
 });
 
-// ACTIVATE: Clean up old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => 
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+    )).then(() => self.clients.claim())
   );
 });
 
-// FETCH: Serve from cache first, then network, fallback to offline page
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
-
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
-        .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-          return res;
-        })
-        .catch(() => caches.match('/'))
+      fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+        return res;
+      }).catch(() => caches.match('/'))
     );
     return;
   }
-
   event.respondWith(
-    caches.match(req).then(cached => 
-      cached || fetch(req).then(networkRes => {
-        try {
-          if (new URL(req.url).origin === location.origin) {
-            const copy = networkRes.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-          }
-        } catch(e) {}
-        return networkRes;
-      }).catch(() => caches.match('/'))
-    )
+    caches.match(req).then(cached => cached || fetch(req).then(networkRes => {
+      try {
+        if (new URL(req.url).origin === location.origin) {
+          const copy = networkRes.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+        }
+      } catch(e) {}
+      return networkRes;
+    })).catch(() => caches.match('/'))
   );
 });
-
-// PERIODIC SYNC: Listen for sync events from main thread
-self.addEventListener('periodicsync', event => {
-  if (event.tag === 'fetch-new-content') {
-    event.waitUntil(fetchNewContent());
-  }
-});
-
-// Example function to fetch new content
-async function fetchNewContent() {
-  try {
-    const res = await fetch('/index.json');
-    const data = await res.json();
-    console.log('Periodic sync fetched new content:', data);
-    // Optionally, update cache here
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put('/index.json', new Response(JSON.stringify(data)));
-  } catch(err) {
-    console.error('Periodic sync failed:', err);
-  }
-}
