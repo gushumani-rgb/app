@@ -237,7 +237,7 @@ jobs:
           index_path = root / os.environ.get("INDEX_PATH", "index.json")
           sw_path = root / "sw.js"
 
-          PRIORITY_RECENT = 5
+          PRIORITY_RECENT = 5  # Number of recent posts to prioritize
           PRECACHE = set()
           PRECACHE.update(["/", "/index.json"])
 
@@ -254,6 +254,7 @@ jobs:
 
           posts_sorted = sorted(data, key=parse_date, reverse=True)
 
+          # Recent posts first
           for post in posts_sorted[:PRIORITY_RECENT]:
               p = post.get("path")
               if p:
@@ -264,6 +265,7 @@ jobs:
                   if img:
                       PRECACHE.add(img.strip())
 
+          # Remaining posts
           for post in posts_sorted[PRIORITY_RECENT:]:
               p = post.get("path")
               if p:
@@ -336,15 +338,7 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-
-          # Ensure local branch matches remote
-          git fetch origin main
-          git reset --hard origin/main
-
+          git pull --rebase --autostash origin main
           git add index.json sw.js
-
-          if ! git diff --cached --quiet; then
-            git commit -m "Update index.json and sw.js [skip ci]"
-            git push origin main
-          else
-            echo "No changes to commit."
+          git commit -m "Update index.json and sw.js [skip ci]" || echo "Nothing to commit"
+          git push origin main
