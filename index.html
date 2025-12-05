@@ -19,13 +19,24 @@
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Anywhere Income</h1>
-  <input id="jsonFilter" class="search" placeholder="Filter posts...">
-  <div id="posts">Loading posts...</div>
-</div>
+  <header class="wrap" role="banner" aria-label="Site header">
+    <h1 id="site-title">Anywhere Income</h1>
+  </header>
+
+  <main id="maincontent" role="main" tabindex="-1">
+    <div class="wrap">
+      <input id="jsonFilter" class="search" placeholder="Filter posts...">
+      <div id="posts">Loading posts...</div>
+    </div>
+  </main>
+
+  <footer class="wrap" role="contentinfo" aria-label="Site footer" style="text-align:center;padding:12px;color:#4a5568;">
+    <small>&copy; <span id="year"></span> Anywhere Income</small>
+  </footer>
 
 <script>
+document.getElementById('year').textContent = new Date().getFullYear();
+
 function fixPath(path,type='post'){if(!path) return ''; if(path.startsWith('http')||path.startsWith('/')) return path; return type==='image'?'Images/'+path:'Posts/'+path;}
 function timeAgo(dateStr){const d=new Date(dateStr),now=new Date(),diff=Math.floor((now-d)/1000);if(diff<60)return diff+' second'+(diff!==1?'s':'')+' ago'; if(diff<3600)return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; if(diff<86400)return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago';}
 function makeLink(href,title){const a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=title;return a;}
