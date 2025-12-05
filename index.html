@@ -112,21 +112,30 @@
         title.appendChild(titleAnchor);
         div.appendChild(title);
 
-        // Featured Image or YouTube Thumbnail
-        let imagePath = post.featuredImage || post.image;
-        if (!imagePath && post.link) {
+        // Images logic: YouTube first, first content image second, featured image last
+        const images = [];
+
+        // 1. YouTube thumbnail
+        if(post.link){
           const ytMatch = post.link.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
-          if (ytMatch) {
-            const videoId = ytMatch[1];
-            imagePath = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+          if(ytMatch){
+            images.push(`https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`);
           }
         }
 
-        if (imagePath) {
+        // 2. First image in content
+        if(post.image) images.push(post.image);
+
+        // 3. Featured image last
+        if(post.featuredImage) images.push(post.featuredImage);
+
+        images.forEach(imgPath => {
+          if(!imgPath) return;
+
           const img = document.createElement('img');
           const widthDisplay = 543;
           const heightDisplay = 293;
-          const originalPath = fixPath(imagePath, 'image');
+          const originalPath = fixPath(imgPath, 'image');
           const smallPath = originalPath.replace(/(\.[a-z]+)$/i, '-543w$1');
 
           img.src = smallPath;
@@ -136,7 +145,7 @@
           img.height = heightDisplay;
           img.style.width = '100%';
           img.style.height = 'auto';
-          img.alt = post.title ? post.title + " – featured image" : "Post featured image";
+          img.alt = post.title ? post.title + " – image" : "Post image";
           img.fetchPriority = "high";
           img.style.borderRadius = '8px';
           img.style.marginBottom = '8px';
@@ -159,7 +168,7 @@
           const imgLink = makePostLink(titleHref, postTitle);
           imgLink.appendChild(img);
           div.insertBefore(imgLink, div.querySelector('h2').nextSibling);
-        }
+        });
 
         // Summary + Read More
         if (post.summary || post.excerpt) {
