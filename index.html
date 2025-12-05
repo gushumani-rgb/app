@@ -40,7 +40,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
 function fixPath(path,type='post'){
   if(!path) return ''; 
   if(path.startsWith('http')||path.startsWith('/')) return path; 
-  return type==='image'?'Images/'+path:'Posts/'+path;
+  return type==='image'?'Posts/'+path:'Posts/'+path;
 }
 
 function timeAgo(dateStr){
@@ -113,27 +113,20 @@ function renderPosts(posts){
       img.src = src; 
       img.alt = titleText; 
 
-      // Explicit width and height
-      img.width = 500;   
-      img.height = 200;  
-
       // Responsive styling
       img.style.width = '100%';    
       img.style.height = 'auto';   
-      img.onerror = () => handleImageError(img); 
 
-      // Async decoding to improve download/render
       img.decoding = 'async';
-
       if(!firstImageSet){
-        // First image = LCP candidate
         img.loading = 'eager';
         img.setAttribute('fetchpriority', 'high');
         firstImageSet = true;
       } else {
-        // All other images lazy load
         img.loading = 'lazy';
       }
+
+      img.onerror = () => handleImageError(img); 
 
       div.appendChild(img);
     });
