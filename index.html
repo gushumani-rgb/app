@@ -246,5 +246,11 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{
   },30000);
 })();
 </script>
+  <script>
+  if (typeof navigator.serviceWorker !== 'undefined') {
+    navigator.serviceWorker.register('sw.js')
+  }
+</script>
+
 </body>
 </html>
