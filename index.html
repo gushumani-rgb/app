@@ -83,6 +83,7 @@
       return a;
     }
 
+    // Central fallback image
     function handleImageError(img) {
       img.onerror = null;
       img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -134,15 +135,14 @@
           const smallPath = originalPath.replace(/(\.[a-z]+)$/i, '-543w$1');
 
           img.src = smallPath;
-          img.srcset = `${smallPath} 543w, ${originalPath} 1280w`;
+          img.srcset = `${smallPath} 543w, ${originalPath} 800w`;
           img.sizes = '(max-width: 600px) 100vw, 543px';
           img.width = widthDisplay;
           img.height = heightDisplay;
           img.style.width = '100%';
           img.style.height = 'auto';
           img.alt = postTitle + " – image";
-          img.loading = 'lazy';
-          img.fetchPriority = 'high';
+          img.fetchPriority = "high";
           img.style.borderRadius = '8px';
           img.style.marginBottom = '8px';
 
