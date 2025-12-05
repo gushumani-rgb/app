@@ -67,7 +67,8 @@ jobs:
               return {}, text
 
           def extract_youtube_thumbnail(text):
-              urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
+              # matches youtube.com/watch?v=VIDEOID or youtu.be/VIDEOID
+              urls = re.findall(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11}))', text)
               if urls:
                   video_id = urls[0][1]
                   return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
@@ -106,7 +107,7 @@ jobs:
                               meta.setdefault('tags', [t.strip() for t in kw['content'].split(',') if t.strip()])
 
                       if not meta.get('title'):
-                          m = re.search(r'^\\s*#\\s+(.+)$', body, re.MULTILINE)
+                          m = re.search(r'^\s*#\s+(.+)$', body, re.MULTILINE)
                           meta['title'] = m.group(1).strip() if m else p.stem
 
                       if not meta.get('excerpt'):
@@ -136,15 +137,15 @@ jobs:
                       # Tags and categories
                       tags = meta.get('tags') or meta.get('tag') or meta.get('keywords') or []
                       if isinstance(tags, str):
-                          tags = [t.strip() for t in re.split(r'[,\\s]+', tags) if t.strip()]
+                          tags = [t.strip() for t in re.split(r'[,\s]+', tags) if t.strip()]
                       categories = meta.get('categories') or meta.get('category') or []
                       if isinstance(categories, str):
-                          categories = [t.strip() for t in re.split(r'[,\\s]+', categories) if t.strip()]
+                          categories = [t.strip() for t in re.split(r'[,\s]+', categories) if t.strip()]
 
                       # Reading time
                       text_only = re.sub(r'<[^>]+>', '', body)
-                      text_only = re.sub(r'[`*_>#~\\-]{1,}', ' ', text_only)
-                      words = len(re.findall(r'\\w+', text_only))
+                      text_only = re.sub(r'[`*_>#~\-]{1,}', ' ', text_only)
+                      words = len(re.findall(r'\w+', text_only))
                       reading_time = max(1, int(round(words / 200))) if words > 0 else 1
 
                       rel = p.relative_to(root).as_posix()
