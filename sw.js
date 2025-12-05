@@ -1,5 +1,4 @@
 
-// Auto-generated service worker
 const CACHE_NAME = 'site-cache-v1';
 const PRECACHE = [
   "/",
@@ -31,9 +30,11 @@ self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(PRECACHE.map(u => new Request(u, {credentials: 'same-origin'}))).catch(err => {
-        console.warn('Some resources failed to cache:', err);
-      });
+      return Promise.all(
+        PRECACHE.map(u => cache.add(new Request(u, {credentials: 'same-origin'}))).catch(err => {
+          console.warn('Some resources failed to cache:', err);
+        })
+      );
     })
   );
 });
@@ -62,7 +63,8 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(req).then(cached => cached || fetch(req).then(networkRes => {
       try {
-        if (new URL(req.url).origin === location.origin) {
+        const url = new URL(req.url);
+        if (url.origin === location.origin || url.href.startsWith('http')) {
           const copy = networkRes.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
         }
