@@ -142,7 +142,7 @@ function handleImageError(img){
   img.alt='no image';
 }
 
-// YouTube thumbnail as normal image
+// Fixed YouTube thumbnail extraction
 function getYouTubeThumbnail(link){
   if(!link) return null;
   try {
@@ -150,9 +150,9 @@ function getYouTubeThumbnail(link){
     let videoId = null;
 
     if(url.hostname.includes('youtu.be')){
-      videoId = url.pathname.slice(1);
+      videoId = url.pathname.slice(1); // everything after "/"
     } else if(url.hostname.includes('youtube.com')){
-      videoId = url.searchParams.get('v');
+      videoId = url.searchParams.get('v'); // "v" param
     }
 
     return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
@@ -177,7 +177,7 @@ function renderPosts(posts){
   const container = document.getElementById('posts'); 
   container.innerHTML = posts.length ? '' : 'No posts yet.';
 
-  // Sort posts BEFORE rendering
+  // Sort posts BEFORE rendering to avoid layout shifts
   posts.sort((a,b)=>new Date(b.date) - new Date(a.date));
 
   posts.forEach(post => {
@@ -191,7 +191,7 @@ function renderPosts(posts){
     h2.appendChild(makeLink(link, titleText)); 
     div.appendChild(h2);
 
-    // Combine all images: YouTube thumbnail + post images + featuredImage
+    // Get images: YouTube thumbnail first, then post.image, then featuredImage
     const images = [
       getYouTubeThumbnail(post.link),
       post.image && fixPath(post.image, 'image'),
@@ -209,9 +209,14 @@ function renderPosts(posts){
       img.width = 500;
       img.height = 200;
 
-      // First image eager + fetchpriority high, others lazy
-      img.loading = index === 0 ? 'eager' : 'lazy';
-      if(index === 0) img.setAttribute('fetchpriority', 'high');
+      if(index === 0){
+        // First image: eager + fetchpriority high for LCP
+        img.loading = 'eager';
+        img.setAttribute('fetchpriority', 'high');
+      } else {
+        // Lazy load the rest
+        img.loading = 'lazy';
+      }
 
       img.onerror = () => handleImageError(img); 
       div.appendChild(img);
@@ -257,11 +262,11 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{
   },30000);
 })();
 </script>
-<script>
-if (typeof navigator.serviceWorker !== 'undefined') {
-  navigator.serviceWorker.register('/sw.js');
-}
-</script>
+  <script>
+  if (typeof navigator.serviceWorker !== 'undefined') {
+    navigator.serviceWorker.register('/sw.js');
+  }
+  </script>
 
 </body>
 </html>
