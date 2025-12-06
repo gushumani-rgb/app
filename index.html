@@ -67,15 +67,6 @@ document.getElementById('jsonFilter').addEventListener('input', e => {
 });
 
 // --- PWA + Push notifications ---
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
-
 function isPWA() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
@@ -84,7 +75,7 @@ async function subscribeToPush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
   try {
     const reg = await navigator.serviceWorker.register('/sw.js');
-    console.log('Service Worker registered (PWA):', reg.scope);
+    console.log('Service Worker registered:', reg.scope);
 
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
@@ -103,28 +94,48 @@ async function subscribeToPush() {
       body: JSON.stringify(subscription)
     });
 
-    console.log('Push notifications enabled (PWA)', subscription);
+    console.log('Push notifications enabled', subscription);
   } catch (err) {
-    console.error('Push notification error (PWA):', err);
+    console.error('Push notification error:', err);
   }
 }
 
-// Subscribe immediately if already installed
+// Automatically subscribe if PWA
 if (isPWA()) subscribeToPush();
 
-// Subscribe when PWA is installed later
-window.addEventListener('appinstalled', () => {
-  console.log('PWA installed!');
-  subscribeToPush();
-});
-
-// Optional: detect beforeinstallprompt for custom install button
+// Install prompt for browsers
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  console.log('beforeinstallprompt fired');
-  // You can show a custom "Install" button here
+
+  const btn = document.createElement('button');
+  btn.textContent = 'Install App';
+  btn.style.position = 'fixed';
+  btn.style.bottom = '20px';
+  btn.style.right = '20px';
+  btn.style.zIndex = 9999;
+  btn.style.padding = '10px 16px';
+  btn.style.background = '#0b63b8';
+  btn.style.color = '#fff';
+  btn.style.border = 'none';
+  btn.style.borderRadius = '8px';
+  btn.style.cursor = 'pointer';
+  document.body.appendChild(btn);
+
+  btn.addEventListener('click', async () => {
+    btn.style.display = 'none';
+    deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    console.log('User choice:', choiceResult.outcome);
+    deferredPrompt = null;
+  });
+});
+
+// Subscribe to push when PWA is installed later
+window.addEventListener('appinstalled', () => {
+  console.log('PWA installed!');
+  subscribeToPush();
 });
 </script>
 </body>
