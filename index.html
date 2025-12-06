@@ -44,14 +44,52 @@
 </footer>
 
 <script>
+// --- Helpers ---
 document.getElementById('year').textContent = new Date().getFullYear();
 
-// --- Helpers ---
-function fixPath(path,type='post'){ if(!path) return ''; if(path.startsWith('http')||path.startsWith('/')) return path; return type==='image'?'Images/'+path:'Posts/'+path; }
-function timeAgo(dateStr){ const d=new Date(dateStr), now=new Date(), diff=Math.floor((now-d)/1000); if(diff<60) return diff+' second'+(diff!==1?'s':'')+' ago'; if(diff<3600) return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; if(diff<86400) return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago'; }
-function makeLink(href,title){ const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=title; return a; }
-function handleImageError(img){ img.onerror=null; img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'); img.alt='no image'; }
-function getYouTubeId(link){ if(!link) return null; try { let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; if(link.includes('youtube.com/watch')){ const urlParams = new URLSearchParams(link.split('?')[1] || ''); return urlParams.get('v'); } return null; } catch(e){ return null; } }
+function fixPath(path,type='post'){ 
+  if(!path) return ''; 
+  if(path.startsWith('http')||path.startsWith('/')) return path; 
+  return type==='image'?'Images/'+path:'Posts/'+path; 
+}
+
+function timeAgo(dateStr){ 
+  const d=new Date(dateStr), now=new Date(), diff=Math.floor((now-d)/1000); 
+  if(diff<60) return diff+' second'+(diff!==1?'s':'')+' ago'; 
+  if(diff<3600) return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; 
+  if(diff<86400) return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; 
+  return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago'; 
+}
+
+function makeLink(href,title){ 
+  const a=document.createElement('a'); 
+  a.href=href; 
+  a.target='_blank'; 
+  a.rel='noopener noreferrer'; 
+  a.textContent=title; 
+  return a; 
+}
+
+function handleImageError(img){ 
+  img.onerror=null; 
+  img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'); 
+  img.alt='no image'; 
+}
+
+function getYouTubeId(link){ 
+  if(!link) return null; 
+  try { 
+    let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); 
+    if(match) return match[1]; 
+    match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); 
+    if(match) return match[1]; 
+    if(link.includes('youtube.com/watch')){
+      const urlParams = new URLSearchParams(link.split('?')[1] || ''); 
+      return urlParams.get('v'); 
+    } 
+    return null; 
+  } catch(e){ return null; } 
+}
 
 async function loadPosts(){ 
   try{ 
@@ -78,10 +116,12 @@ function renderPosts(posts){
     h2.appendChild(makeLink(link,titleText)); 
     div.appendChild(h2); 
 
+    // YouTube thumbnail
     let youtubeThumbnail=null; 
     const videoId=post.youtubeId||getYouTubeId(post.link); 
     if(videoId) youtubeThumbnail=`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; 
 
+    // Images
     const images=[youtubeThumbnail,post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean); 
     const uniqueImages=[...new Set(images)]; 
     uniqueImages.forEach((src,index)=>{ 
@@ -115,6 +155,7 @@ function renderPosts(posts){
   }); 
 }
 
+// --- Load and render posts ---
 (async()=>{
   const posts=await loadPosts(); 
   renderPosts(posts); 
@@ -124,17 +165,17 @@ function renderPosts(posts){
   },30000); 
 })();
 
-// --- Smart Filter ---
-document.getElementById('jsonFilter').addEventListener('input', e => {
-  const q = e.target.value.toLowerCase().trim();
-  Array.from(document.querySelectorAll('.post')).forEach(node => {
-    const title = node.querySelector('h2')?.childNodes[0]?.textContent.toLowerCase() || '';
-    const excerpt = node.querySelector('p')?.childNodes[0]?.textContent.toLowerCase() || '';
-    node.style.display = !q || title.includes(q) || excerpt.includes(q) ? '' : 'none';
-  });
+// --- Filter posts ---
+document.getElementById('jsonFilter').addEventListener('input', e=>{ 
+  const q=e.target.value.toLowerCase().trim(); 
+  Array.from(document.querySelectorAll('.post')).forEach(node=>{
+    const title=node.querySelector('h2')?.innerText.toLowerCase()||''; 
+    const excerpt=node.querySelector('p')?.innerText.toLowerCase()||''; 
+    node.style.display=!q||title.includes(q)||excerpt.includes(q)?'':'none'; 
+  }); 
 });
 
-// --- PWA + Push notifications ---
+// --- PWA helpers ---
 function isPWA() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
@@ -146,15 +187,38 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
+// --- Install prompt on browser ---
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  if (!isPWA()) {
+    setTimeout(async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      console.log('Install prompt choice:', choice.outcome);
+      deferredPrompt = null;
+    }, 500);
+  }
+});
+
+// --- Push notifications in PWA ---
 async function subscribeToPush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
   try {
     const reg = await navigator.serviceWorker.register('/sw.js');
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return;
+    console.log('Service Worker registered:', reg.scope);
 
-    const vapidRes = await fetch('/vapidPublicKey');
-    const { publicKey } = await vapidRes.json();
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('Push notifications blocked');
+      return;
+    }
+
+    const res = await fetch('/vapidPublicKey');
+    const { publicKey } = await res.json();
 
     const subscription = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -173,26 +237,13 @@ async function subscribeToPush() {
   }
 }
 
-// Auto subscribe if already PWA
+// Auto subscribe only if PWA
 if (isPWA()) subscribeToPush();
 
-// Auto prompt install if not installed
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  setTimeout(async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-    }
-  }, 1000);
-});
-
-// Subscribe again on app installed
+// Re-subscribe on appinstalled
 window.addEventListener('appinstalled', () => {
-  subscribeToPush();
+  console.log('App installed!');
+  if (isPWA()) subscribeToPush();
 });
 </script>
 </body>
