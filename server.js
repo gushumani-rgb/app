@@ -1,4 +1,4 @@
-// server.js — Watch posts folder and push to all subscribers
+// server.js — Watch posts folder and push to all PWA subscribers
 const express = require('express');
 const webpush = require('web-push');
 const bodyParser = require('body-parser');
@@ -8,7 +8,7 @@ const path = require('path');
 const app = express();
 app.use(bodyParser.json({ limit: '5mb' }));
 
-// Serve static files from root (posts/, images/, icons/, sw.js, index.html, etc.)
+// Serve static files (posts/, icons/, sw.js, index.html, etc.)
 app.use(express.static(__dirname));
 
 // --- VAPID keys (replace with your own) ---
@@ -24,10 +24,11 @@ const subscriptions = new Map();
 // Return VAPID public key
 app.get('/vapidPublicKey', (req, res) => res.json({ publicKey: VAPID_PUBLIC_KEY }));
 
-// Save subscription from any client (browser or PWA)
+// Save subscription from PWA (auto-subscribe)
 app.post('/api/save-subscription', (req, res) => {
   const subscription = req.body;
   if (!subscription?.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
+
   subscriptions.set(subscription.endpoint, subscription);
   console.log('Saved subscription:', subscription.endpoint);
   res.json({ ok: true });
@@ -40,12 +41,16 @@ async function sendPush(payload) {
       await webpush.sendNotification(sub, JSON.stringify(payload));
     } catch (err) {
       console.error('Push error for', endpoint, err.message);
-      if (err.statusCode === 410 || err.statusCode === 404) subscriptions.delete(endpoint);
+      // Remove expired/invalid subscriptions automatically
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        subscriptions.delete(endpoint);
+        console.log('Removed invalid subscription:', endpoint);
+      }
     }
   }
 }
 
-// --- Watch posts folder in root ---
+// --- Watch posts folder for new posts ---
 const postsFolder = path.join(__dirname, 'posts');
 let knownPosts = new Set();
 
@@ -66,29 +71,23 @@ fs.watch(postsFolder, async (eventType, folderName) => {
     knownPosts.add(folderName);
     console.log('New post detected:', folderName);
 
-    const indexFile = path.join(folderPath, 'index.html');
     let title = 'Untitled';
     let summary = 'Check out our latest post!';
-    let image = '/icons/custom-notification-icon.png';
+    let image = '/icons/notification-badge.png'; // default icon
 
+    // Read index.json for structured content
+    const jsonFile = path.join(folderPath, 'index.json');
     try {
-      const html = fs.readFileSync(indexFile, 'utf8');
-
-      const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-      if (titleMatch) title = titleMatch[1].trim();
-
-      const summaryMatch = html.match(/<p>(.*?)<\/p>/i);
-      if (summaryMatch) summary = summaryMatch[1].trim();
-
-      const imgMatch = html.match(/<img.*?src=["'](.*?)["']/i);
-      if (imgMatch) image = imgMatch[1];
-
-      const ytMatch = html.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/) || html.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-      if (ytMatch) image = `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-
+      const data = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
+      if (data.title) title = data.title;
+      if (data.summary) summary = data.summary;
+      if (data.image) image = data.image;
     } catch (err) {
-      console.warn('Failed to read index.html for new post:', err);
+      console.warn('Failed to read index.json:', err);
     }
+
+    // Use index.html as the link for the notification
+    const htmlFilePath = `/posts/${folderName}/index.html`;
 
     // Push notification payload
     const payload = {
@@ -96,7 +95,7 @@ fs.watch(postsFolder, async (eventType, folderName) => {
       body: summary,
       icon: image,
       badge: '/icons/notification-badge.png',
-      data: { path: `/posts/${folderName}/index.html` }
+      data: { path: htmlFilePath } // link to HTML
     };
 
     await sendPush(payload);
