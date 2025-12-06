@@ -1,4 +1,3 @@
-// server.js — Watch posts folder and push to all PWA subscribers (improved)
 const express = require('express');
 const webpush = require('web-push');
 const bodyParser = require('body-parser');
@@ -8,221 +7,168 @@ const chokidar = require('chokidar');
 
 const app = express();
 app.use(bodyParser.json({ limit: '5mb' }));
-
-// Serve static files (posts/, icons/, sw.js, index.html, etc.)
 app.use(express.static(__dirname));
 
-// --- VAPID keys (prefer environment variables) ---
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BHCiV7I9qgq2eZ9mF7uYXZB9MZC8yI3qT1fS3KpG8vZ3J0e2o0szZlZ2VXz0gH1bT6i2U7sZ2pE6qYbI2fw';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'dOe2lQmQ1z6pY9WQ3w5eB2fT8cS1mA0uLhKpV9cQ2eI';
-const CONTACT_EMAIL = process.env.VAPID_CONTACT || 'mailto:gushumani@gmail.com;
-
-if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-  console.warn('Warning: Missing VAPID keys. Generate them with: npx web-push generate-vapid-keys');
-}
+// --- VAPID keys & email ---
+const VAPID_PUBLIC_KEY = 'BHCiV7I9qgq2eZ9mF7uYXZB9MZC8yI3qT1fS3KpG8vZ3J0e2o0szZlZ2VXz0gH1bT6i2U7sZ2pE6qYbI2fw';
+const VAPID_PRIVATE_KEY = 'dOe2lQmQ1z6pY9WQ3w5eB2fT8cS1mA0uLhKpV9cQ2eI';
+const CONTACT_EMAIL = 'mailto:gushumani@gmail.com';
 
 webpush.setVapidDetails(CONTACT_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-// --- Subscription persistence (file-backed) ---
+// --- Subscriptions ---
 const SUB_FILE = path.join(__dirname, 'subscriptions.json');
+const subscriptions = new Map();
 
 function readSubsFile() {
   try {
     if (!fs.existsSync(SUB_FILE)) return {};
-    const raw = fs.readFileSync(SUB_FILE, 'utf8') || '{}';
-    return JSON.parse(raw);
+    return JSON.parse(fs.readFileSync(SUB_FILE, 'utf8') || '{}');
   } catch (err) {
-    console.error('Failed to read subscriptions file:', err);
+    console.error('Failed to read subscriptions.json:', err);
     return {};
   }
 }
+
 function writeSubsFile(obj) {
   try {
     fs.writeFileSync(SUB_FILE, JSON.stringify(obj, null, 2));
   } catch (err) {
-    console.error('Failed to write subscriptions file:', err);
+    console.error('Failed to write subscriptions.json:', err);
   }
 }
 
-// In-memory Map for fast ops, seeded from file
-const subscriptions = new Map(Object.entries(readSubsFile())); // key: endpoint -> value: subscription object
+// Seed subscriptions
+Object.entries(readSubsFile()).forEach(([k, v]) => subscriptions.set(k, v));
 
-// persist on exit (best-effort)
-process.on('SIGINT', () => {
+// --- Save subscription ---
+app.post('/api/save-subscription', (req, res) => {
+  const sub = req.body;
+  if (!sub || !sub.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
+
+  subscriptions.set(sub.endpoint, sub);
   writeSubsFile(Object.fromEntries(subscriptions));
-  process.exit();
-});
-process.on('SIGTERM', () => {
-  writeSubsFile(Object.fromEntries(subscriptions));
-  process.exit();
+  console.log('Saved subscription:', sub.endpoint);
+  res.json({ ok: true });
 });
 
-// Return VAPID public key
+// --- VAPID public key endpoint ---
 app.get('/vapidPublicKey', (req, res) => res.json({ publicKey: VAPID_PUBLIC_KEY }));
 
-// Save subscription from PWA (auto-subscribe)
-app.post('/api/save-subscription', (req, res) => {
-  const subscription = req.body;
-  if (!subscription || !subscription.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
-
-  subscriptions.set(subscription.endpoint, subscription);
-  // persist to file
-  writeSubsFile(Object.fromEntries(subscriptions));
-
-  console.log('Saved subscription:', subscription.endpoint);
-  res.json({ ok: true });
-});
-
-// Unsubscribe (client should call this when it unsubscribes)
-app.post('/api/unsubscribe', (req, res) => {
-  const { endpoint } = req.body;
-  if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
-
-  const existed = subscriptions.delete(endpoint);
-  writeSubsFile(Object.fromEntries(subscriptions));
-  console.log('Unsubscribed:', endpoint, 'existed?', existed);
-  res.json({ ok: true });
-});
-
-// Send test notification to all subs (POST body can contain custom payload)
-app.post('/api/send-test', async (req, res) => {
-  const payload = req.body && Object.keys(req.body).length ? req.body : {
-    title: 'Test Notification',
-    body: 'This is a server-generated test notification.',
-    icon: '/icons/notification-badge.png',
-    badge: '/icons/notification-badge.png',
-    data: { path: '/' }
-  };
-
-  try {
-    const result = await sendPushToAll(payload);
-    res.json({ ok: true, result });
-  } catch (err) {
-    console.error('Error sending test:', err);
-    res.status(500).json({ error: 'Failed to send' });
-  }
-});
-
-// --- sendPush implementation (batched + error cleanup) ---
-async function sendPushBatch(subArray, payload) {
-  // returns array of { endpoint, status, error? }
-  const tasks = subArray.map(sub => {
-    return webpush.sendNotification(sub, JSON.stringify(payload))
-      .then(() => ({ endpoint: sub.endpoint, status: 'ok' }))
-      .catch(err => ({ endpoint: sub.endpoint, status: 'failed', statusCode: err.statusCode || null, message: err.body || err.message || String(err) }));
-  });
-  return Promise.allSettled(tasks).then(results => results.map(r => r.status === 'fulfilled' ? r.value : { status: 'failed', reason: r.reason }));
-}
-
-async function sendPushToAll(payload, batchSize = 20) {
-  const subs = Array.from(subscriptions.values());
+// --- Send push to all subscribers ---
+async function sendPushToAll(payload) {
   const results = [];
-  for (let i = 0; i < subs.length; i += batchSize) {
-    const batch = subs.slice(i, i + batchSize);
-    // run send in parallel for this batch
-    const batchResults = await sendPushBatch(batch, payload);
-
-    // handle cleanup for failures that are permanent
-    for (const r of batchResults) {
-      if (!r || r.status !== 'ok') {
-        const endpoint = r.endpoint;
-        // try to parse statusCode; on 410/404 remove subscription
-        if (r.statusCode === 410 || r.statusCode === 404) {
-          subscriptions.delete(endpoint);
-          console.log('Removed expired subscription:', endpoint);
-        } else {
-          console.warn('Push failed for', endpoint, r.statusCode, r.message);
-        }
-        results.push(r);
-      } else {
-        results.push(r);
+  for (const sub of subscriptions.values()) {
+    try {
+      await webpush.sendNotification(sub, JSON.stringify(payload));
+      results.push({ endpoint: sub.endpoint, status: 'ok' });
+    } catch (err) {
+      console.warn('Push failed:', err.statusCode, err.message);
+      results.push({ endpoint: sub.endpoint, status: 'failed', error: err.message });
+      if (err.statusCode === 404 || err.statusCode === 410) {
+        subscriptions.delete(sub.endpoint);
       }
     }
   }
-  // persist current subs (after cleanup)
   writeSubsFile(Object.fromEntries(subscriptions));
   return results;
 }
 
-// --- Watch posts folder for new posts using chokidar ---
+// --- Posts watcher ---
 const postsFolder = path.join(__dirname, 'posts');
+if (!fs.existsSync(postsFolder)) fs.mkdirSync(postsFolder, { recursive: true });
+
 const knownPosts = new Set();
+fs.readdirSync(postsFolder, { withFileTypes: true }).forEach(f => {
+  if (f.isDirectory() || (f.isFile() && f.name.endsWith('.html'))) knownPosts.add(f.name);
+});
 
-// ensure posts folder exists
-if (!fs.existsSync(postsFolder)) {
-  fs.mkdirSync(postsFolder, { recursive: true });
-}
-
-// Seed known posts from existing directories
-try {
-  const files = fs.readdirSync(postsFolder, { withFileTypes: true });
-  files.filter(f => f.isDirectory()).forEach(dir => knownPosts.add(dir.name));
-} catch (err) {
-  console.error('Failed to read posts folder:', err);
-}
-
-// Watch for new directories (new posts)
 const watcher = chokidar.watch(postsFolder, {
   ignoreInitial: true,
   depth: 1,
-  awaitWriteFinish: {
-    stabilityThreshold: 500,
-    pollInterval: 100
-  }
+  awaitWriteFinish: { stabilityThreshold: 500, pollInterval: 100 }
 });
 
-// --- New post watcher ---
-watcher.on('addDir', async (dirPath) => {
-  const folderName = path.basename(dirPath);
-  if (knownPosts.has(folderName)) return;
-  knownPosts.add(folderName);
-  console.log('New post folder detected:', folderName);
+// --- Handle new post ---
+async function handleNewPost(fullPath, isFolder = false) {
+  const name = path.basename(fullPath);
+  if (knownPosts.has(name)) return;
+  knownPosts.add(name);
+  console.log('New post detected:', name);
 
-  // default metadata
   let title = 'Untitled';
   let summary = 'Check out our latest post!';
   let image = '/icons/notification-badge.png';
+  let htmlPath;
 
-  const jsonFile = path.join(dirPath, 'index.json');
-  try {
-    if (fs.existsSync(jsonFile)) {
-      const raw = fs.readFileSync(jsonFile, 'utf8');
-      const data = JSON.parse(raw);
-
-      if (data.title) title = data.title;
-      if (data.excerpt) summary = data.excerpt;             // matches your index.json
-      if (data.featuredImage) image = data.featuredImage;  // matches your index.json
+  if (isFolder) {
+    htmlPath = `/posts/${name}/index.html`;
+    const jsonFile = path.join(fullPath, 'index.json');
+    try {
+      if (fs.existsSync(jsonFile)) {
+        const data = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
+        if (data.title) title = data.title;
+        if (data.excerpt) summary = data.excerpt;
+        if (data.featuredImage) image = data.featuredImage;
+      }
+    } catch (err) {
+      console.warn('Failed to read index.json for folder', name, err);
     }
-  } catch (err) {
-    console.warn('Failed to read index.json for', folderName, err);
+  } else { // single HTML file
+    htmlPath = `/posts/${name}`;
+    const jsonFile = fullPath.replace(/\.html$/, '.json');
+    let jsonLoaded = false;
+
+    try {
+      if (fs.existsSync(jsonFile)) {
+        const data = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
+        if (data.title) title = data.title;
+        if (data.excerpt) summary = data.excerpt;
+        if (data.featuredImage) image = data.featuredImage;
+        jsonLoaded = true;
+      }
+    } catch (err) {
+      console.warn('Failed to read JSON for file', name, err);
+    }
+
+    // Extract <title> from HTML if no JSON title
+    if (!jsonLoaded || title === 'Untitled') {
+      try {
+        const htmlContent = fs.readFileSync(fullPath, 'utf8');
+        const match = htmlContent.match(/<title>(.*?)<\/title>/i);
+        if (match && match[1]) title = match[1].trim();
+      } catch (err) {
+        console.warn('Failed to extract title from HTML for', name, err);
+      }
+    }
   }
 
-  const htmlFilePath = `/posts/${folderName}/index.html`;
   const payload = {
     title: 'New Post: ' + title,
     body: summary,
     icon: image,
     badge: '/icons/notification-badge.png',
-    data: { path: htmlFilePath },
+    data: { path: htmlPath },
     tag: 'new-post'
   };
 
   try {
-    const sendResult = await sendPushToAll(payload);
-    console.log('Push sent for new post:', folderName, 'results:', sendResult.length);
+    const result = await sendPushToAll(payload);
+    console.log('Push sent for post:', name, 'results:', result.length);
   } catch (err) {
-    console.error('Error sending push for new post:', err);
+    console.error('Error sending push for post:', name, err);
   }
-});
+}
 
-// Optional: watch for new single-file posts under /posts/*.html
-watcher.on('add', async (filePath) => {
-  // implement logic if you publish single-file posts directly
+// Watch for new folders
+watcher.on('addDir', dirPath => handleNewPost(dirPath, true));
+
+// Watch for new HTML files
+watcher.on('add', filePath => {
+  if (!filePath.endsWith('.html')) return;
+  handleNewPost(filePath, false);
 });
 
 // --- Start server ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`VAPID Public Key (serve to clients): ${VAPID_PUBLIC_KEY}`);
-});
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
