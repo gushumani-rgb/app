@@ -50,35 +50,108 @@ document.getElementById('year').textContent = new Date().getFullYear();
 function fixPath(path,type='post'){ if(!path) return ''; if(path.startsWith('http')||path.startsWith('/')) return path; return type==='image'?'Images/'+path:'Posts/'+path; }
 function timeAgo(dateStr){ const d=new Date(dateStr), now=new Date(), diff=Math.floor((now-d)/1000); if(diff<60) return diff+' second'+(diff!==1?'s':'')+' ago'; if(diff<3600) return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; if(diff<86400) return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago'; }
 function handleImageError(img){ img.onerror=null; img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'); img.alt='no image'; }
-function getYouTubeId(link){ if(!link) return null; try { let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; if(link.includes('youtube.com/watch')){ const urlParams = new URLSearchParams(link.split('?')[1] || ''); return urlParams.get('v'); } return null; } catch(e){ return null; }
-}
+function getYouTubeId(link){ if(!link) return null; try { let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; if(link.includes('youtube.com/watch')){ const urlParams = new URLSearchParams(link.split('?')[1] || ''); return urlParams.get('v'); } return null; } catch(e){ return null; } }
 function makeLink(href,title){ const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=title; return a; }
+function normalizePath(path) { if (!path) return '/'; if (!path.startsWith('/')) path = '/' + path; if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1); if (path.endsWith('/index.html')) path = path.slice(0, -10); return path; }
 
 // --- Load posts ---
-async function loadPosts(){ try{ const res=await fetch('index.json',{cache:'no-cache'}); if(!res.ok) throw new Error('Failed to fetch index.json'); const data=await res.json(); return Array.isArray(data)?data:[]; } catch(e){ console.warn('Error loading posts:',e); return []; } }
+async function loadPosts(){ 
+  try{ const res=await fetch('index.json',{cache:'no-cache'}); if(!res.ok) throw new Error('Failed to fetch index.json'); const data=await res.json(); return Array.isArray(data)?data:[]; } catch(e){ console.warn('Error loading posts:',e); return []; } 
+}
+
+// --- SPA modal management with cache ---
+let openPost = null;
+let modalContentCache = {}; // cache post content
+
+function getPostByPath(path, posts) { 
+  const current = normalizePath(path); 
+  return posts.find(p => normalizePath(p.link || '/') === current); 
+}
+
+async function showPostModal(post) {
+  openPost = post;
+  document.getElementById('posts').style.display = 'none';
+  
+  const oldModal = document.getElementById('postModal');
+  if (oldModal) oldModal.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'postModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;overflow:auto;z-index:9999;padding:20px;';
+
+  const backBtn = document.createElement('button');
+  backBtn.textContent = '← Back';
+  backBtn.style.cssText = 'margin-bottom:16px;font-size:16px;';
+  backBtn.addEventListener('click', () => { history.pushState({}, '', '/'); closeModal(); });
+  modal.appendChild(backBtn);
+
+  const h2 = document.createElement('h2');
+  h2.textContent = post.title || 'Untitled';
+  modal.appendChild(h2);
+
+  const images = [];
+  const videoId = post.youtubeId || getYouTubeId(post.link);
+  if(videoId) images.push(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`);
+  if(post.image) images.push(fixPath(post.image,'image'));
+  if(post.featuredImage) images.push(fixPath(post.featuredImage,'image'));
+  [...new Set(images)].forEach(src => {
+    const img = document.createElement('img');
+    img.src = src; img.alt = post.title; img.style.cssText = 'width:100%;max-width:800px;margin:10px 0;';
+    img.onerror = () => handleImageError(img);
+    modal.appendChild(img);
+  });
+
+  // Full content (cached)
+  const contentDiv = document.createElement('div');
+  const cacheKey = post.link || post.path || post.content_file || '';
+  if(modalContentCache[cacheKey]){
+    contentDiv.innerHTML = modalContentCache[cacheKey];
+  } else {
+    if(post.content_file){
+      try{
+        const res = await fetch(fixPath(post.content_file,'post'));
+        contentDiv.innerHTML = res.ok ? await res.text() : (post.summary||post.excerpt||'');
+      } catch {
+        contentDiv.textContent = post.summary||post.excerpt||'';
+      }
+    } else {
+      contentDiv.textContent = post.summary||post.excerpt||'';
+    }
+    modalContentCache[cacheKey] = contentDiv.innerHTML;
+  }
+  modal.appendChild(contentDiv);
+
+  document.body.appendChild(modal);
+
+  // Push URL state
+  const link = post.link || fixPath(post.content_file || post.path, 'post') || '/';
+  if(normalizePath(window.location.pathname) !== normalizePath(link)){
+    history.pushState({post}, '', link);
+  }
+}
+
+function closeModal(){ 
+  openPost = null; 
+  const modal = document.getElementById('postModal'); 
+  if(modal) modal.remove(); 
+  document.getElementById('posts').style.display='block'; 
+}
 
 // --- Render posts ---
 function renderPosts(posts){
-  const container=document.getElementById('posts');
-  container.innerHTML = posts.length ? '' : 'No posts yet.';
+  const container=document.getElementById('posts'); container.innerHTML = posts.length ? '' : 'No posts yet.';
   posts.sort((a,b)=>new Date(b.date)-new Date(a.date));
+
   posts.forEach(post=>{
-    const div=document.createElement('div');
-    div.className='post';
+    const div=document.createElement('div'); div.className='post';
     const titleText=post.title?.trim()||'Untitled';
     const link=post.link||fixPath(post.content_file||post.path,'post')||'#';
 
     const h2=document.createElement('h2');
     const titleLink=document.createElement('a');
-    titleLink.href=link;
-    titleLink.textContent=titleText;
-    titleLink.addEventListener('click', e=>{
-      e.preventDefault();
-      history.pushState({post}, '', link);
-      showPostModal(post);
-    });
-    h2.appendChild(titleLink);
-    div.appendChild(h2);
+    titleLink.href=link; titleLink.textContent=titleText;
+    titleLink.addEventListener('click', e=>{ e.preventDefault(); showPostModal(post); });
+    h2.appendChild(titleLink); div.appendChild(h2);
 
     const images=[];
     const videoId=post.youtubeId||getYouTubeId(post.link);
@@ -86,35 +159,20 @@ function renderPosts(posts){
     if(post.image) images.push(fixPath(post.image,'image'));
     if(post.featuredImage) images.push(fixPath(post.featuredImage,'image'));
     [...new Set(images)].forEach((src,index)=>{
-      const img=document.createElement('img');
-      img.src=src;
-      img.alt=titleText;
-      img.decoding='async';
-      img.width=500; img.height=200;
+      const img=document.createElement('img'); img.src=src; img.alt=titleText; img.decoding='async'; img.width=500; img.height=200;
       if(index===0){img.loading='eager'; img.setAttribute('fetchpriority','high');} else img.loading='lazy';
-      img.onerror=()=>handleImageError(img);
-      div.appendChild(img);
+      img.onerror=()=>handleImageError(img); div.appendChild(img);
     });
 
-    const p=document.createElement('p');
-    p.className='post-text';
+    const p=document.createElement('p'); p.className='post-text';
     const text=(post.summary||post.excerpt||'').trim();
-    const maxLength=200;
-    p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text;
-    const readMore=makeLink(link,`Read more about "${titleText}"`);
-    readMore.className='read-more';
-    readMore.addEventListener('click', e=>{
-      e.preventDefault();
-      history.pushState({post}, '', link);
-      showPostModal(post);
-    });
-    p.appendChild(readMore);
-    div.appendChild(p);
+    const maxLength=200; p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text;
 
-    const d=document.createElement('div');
-    d.className='date';
-    d.textContent=post.date?timeAgo(post.date):'';
-    div.appendChild(d);
+    const readMore=makeLink(link,`Read more about "${titleText}"`); readMore.className='read-more';
+    readMore.addEventListener('click', e=>{ e.preventDefault(); showPostModal(post); });
+    p.appendChild(readMore); div.appendChild(p);
+
+    const d=document.createElement('div'); d.className='date'; d.textContent=post.date?timeAgo(post.date):''; div.appendChild(d);
 
     container.appendChild(div);
   });
@@ -130,91 +188,21 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{
   });
 });
 
-// --- SPA Modal ---
-async function showPostModal(post){
-  document.getElementById('posts').style.display='none';
-  const oldModal=document.getElementById('postModal');
-  if(oldModal) oldModal.remove();
-
-  const modal=document.createElement('div');
-  modal.id='postModal';
-  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;overflow:auto;z-index:9999;padding:20px;';
-
-  const backBtn=document.createElement('button');
-  backBtn.textContent='← Back';
-  backBtn.style.cssText='margin-bottom:16px;font-size:16px;';
-  backBtn.addEventListener('click', ()=>{
-    history.pushState({}, '', '/');
-    closeModal();
-  });
-  modal.appendChild(backBtn);
-
-  const h2=document.createElement('h2');
-  h2.textContent=post.title||'Untitled';
-  modal.appendChild(h2);
-
-  // Images
-  const images=[];
-  const videoId=post.youtubeId||getYouTubeId(post.link);
-  if(videoId) images.push(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`);
-  if(post.image) images.push(fixPath(post.image,'image'));
-  if(post.featuredImage) images.push(fixPath(post.featuredImage,'image'));
-  [...new Set(images)].forEach(src=>{
-    const img=document.createElement('img');
-    img.src=src;
-    img.alt=post.title;
-    img.style.cssText='width:100%;max-width:800px;margin:10px 0;';
-    img.onerror=()=>handleImageError(img);
-    modal.appendChild(img);
-  });
-
-  // Full content
-  if(post.content_file){
-    try{
-      const res=await fetch(fixPath(post.content_file,'post'));
-      if(res.ok){
-        const html=await res.text();
-        const div=document.createElement('div');
-        div.innerHTML=html;
-        modal.appendChild(div);
-      }else{
-        const p=document.createElement('p');
-        p.textContent=post.summary||post.excerpt||'';
-        modal.appendChild(p);
-      }
-    }catch(err){
-      console.error('Failed to load full post:',err);
-      const p=document.createElement('p');
-      p.textContent=post.summary||post.excerpt||'';
-      modal.appendChild(p);
-    }
-  }else{
-    const p=document.createElement('p');
-    p.textContent=post.summary||post.excerpt||'';
-    modal.appendChild(p);
-  }
-
-  document.body.appendChild(modal);
-}
-
-function closeModal(){
-  const modal=document.getElementById('postModal');
-  if(modal) modal.remove();
-  document.getElementById('posts').style.display='block';
-}
-
-// --- Popstate override ---
-window.addEventListener('popstate', ()=>{
-  closeModal();
-  history.replaceState({}, '', '/');
-});
-
-// --- Load posts initially ---
+// --- Initial load + modal auto-open ---
 (async()=>{
-  const posts=await loadPosts();
+  const posts = await loadPosts();
   renderPosts(posts);
-  setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000);
+
+  const initialPost = getPostByPath(window.location.pathname, posts);
+  if(initialPost) showPostModal(initialPost);
 })();
+
+// --- Popstate for back/forward ---
+window.addEventListener('popstate', ()=>{
+  const posts = document.querySelectorAll('.post');
+  const post = getPostByPath(window.location.pathname, posts);
+  if(post) showPostModal(post); else closeModal();
+});
 
 // --- PWA Service Worker + Push Subscription on First Click ---
 if('serviceWorker' in navigator && 'PushManager' in window){
