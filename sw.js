@@ -13,6 +13,7 @@ const PRECACHE = [
   "/posts/search-earn/",
   "/posts/sproughtgigs-earnings/",
   "/posts/sproughtgigs-video/",
+  "/posts/test-post/",
   "/posts/timebucks/",
   "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgCGidyUJf_In9HiPsmfJ20th393UX3U-kRAXf0qZwBO-YvKztuDyBR0nesmwJFE82YCfs3NZHGfV3CTTjXQfN-US_8deBm0VVU70U1GjDFo5Rd_hms9jpK3ZNqDzE-IVt4rEawkTBsSPnIHj1wY2D_Wwwootj3jav04BnCeIWk0mNfdfGEa7HpvtqI_axZ/s1600/1000062637.webp",
   "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgoU9ctw-i8fki_svLXzwjVJUgfc2q4xLG507peNxYoFTfMYJSpMStd0Eg1HJkjWs1TW7yPR6AxZxXSXITps2NRx8Xk8ZrYao9qLbBL0BtZqFj5teAQwx9vD_EAGjTp3FEo_y23zB9Vs4TGBDwBIt2RNI8joHlsOmj0NQ1ffR7l6k4JrjLasZ5J2QZbnT6O/s1600/1000062618.webp",
