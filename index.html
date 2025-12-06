@@ -57,72 +57,66 @@ function renderPosts(posts){ const container=document.getElementById('posts'); c
 document.getElementById('jsonFilter').addEventListener('input', e=>{ const q=e.target.value.toLowerCase().trim(); Array.from(document.querySelectorAll('.post')).forEach(node=>{ const title=node.querySelector('h2')?.innerText.toLowerCase()||''; const excerpt=node.querySelector('p')?.innerText.toLowerCase()||''; node.style.display=!q||title.includes(q)||excerpt.includes(q)?'none':''; }); });
 (async()=>{ const posts=await loadPosts(); renderPosts(posts); setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000); })();
 
-// --- PWA Service Worker + Auto Push Subscription ---
+// --- PWA Service Worker + Push Subscription on First Click ---
 if ('serviceWorker' in navigator && 'PushManager' in window) {
-  // keep registration on load, but delay permission + subscribe until first user scroll
   let swRegistration = null;
+
+  // Register service worker on load
   window.addEventListener('load', async () => {
     try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      swRegistration = reg;
-      console.log('Service Worker registered:', reg.scope);
+      swRegistration = await navigator.serviceWorker.register('/sw.js');
+      console.log('Service Worker registered:', swRegistration.scope);
     } catch (err) {
       console.error('Service Worker registration failed:', err);
     }
   });
 
-  // one-time scroll handler to request permission and subscribe
-  async function handleFirstScroll() {
+  // Subscribe user function
+  async function subscribeUser() {
     try {
-      // remove the listener so it only runs once
-      window.removeEventListener('scroll', handleFirstScroll, { passive: true });
-
-      // If already have a registration from load, use it; otherwise wait for service worker to be ready
       const reg = swRegistration || await navigator.serviceWorker.ready;
 
-      // Request Notification permission (runs on first scroll)
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         console.log('Notifications blocked or dismissed by user');
         return;
       }
 
-      // Fetch public VAPID key
       const vapidRes = await fetch('/vapidPublicKey');
       const { publicKey } = await vapidRes.json();
 
-      // Subscribe user (or get existing subscription)
-      const subscription = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-      });
+      const subscription = await reg.pushManager.getSubscription() ||
+        await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
 
-      // Send subscription to server
       await fetch('/api/save-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
       });
 
-      console.log('Push notifications enabled on user scroll', subscription);
+      console.log('Push subscription saved to server!', subscription);
     } catch (err) {
-      console.error('Push notification error on scroll:', err);
+      console.error('Push subscription failed:', err);
     }
   }
 
-  // Attach the one-time scroll listener (passive for better performance)
-  window.addEventListener('scroll', handleFirstScroll, { passive: true });
+  // One-time click listener
+  function handleFirstClick() {
+    window.removeEventListener('click', handleFirstClick, { passive: true });
+    subscribeUser();
+  }
+  window.addEventListener('click', handleFirstClick, { passive: true });
 }
 
+// Utility: Convert VAPID key
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 </script>
 </body>
