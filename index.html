@@ -59,15 +59,31 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{ const q=e.t
 
 // --- PWA Service Worker + Auto Push Subscription ---
 if ('serviceWorker' in navigator && 'PushManager' in window) {
+  // keep registration on load, but delay permission + subscribe until first user scroll
+  let swRegistration = null;
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('/sw.js');
+      swRegistration = reg;
       console.log('Service Worker registered:', reg.scope);
+    } catch (err) {
+      console.error('Service Worker registration failed:', err);
+    }
+  });
 
-      // Request Notification permission automatically
+  // one-time scroll handler to request permission and subscribe
+  async function handleFirstScroll() {
+    try {
+      // remove the listener so it only runs once
+      window.removeEventListener('scroll', handleFirstScroll, { passive: true });
+
+      // If already have a registration from load, use it; otherwise wait for service worker to be ready
+      const reg = swRegistration || await navigator.serviceWorker.ready;
+
+      // Request Notification permission (runs on first scroll)
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        console.log('Notifications blocked');
+        console.log('Notifications blocked or dismissed by user');
         return;
       }
 
@@ -88,11 +104,14 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
         body: JSON.stringify(subscription)
       });
 
-      console.log('Push notifications enabled', subscription);
+      console.log('Push notifications enabled on user scroll', subscription);
     } catch (err) {
-      console.error('Push notification error:', err);
+      console.error('Push notification error on scroll:', err);
     }
-  });
+  }
+
+  // Attach the one-time scroll listener (passive for better performance)
+  window.addEventListener('scroll', handleFirstScroll, { passive: true });
 }
 
 function urlBase64ToUint8Array(base64String) {
