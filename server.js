@@ -1,4 +1,4 @@
-// server.js — Push only to installed PWA users with thumbnails
+// server.js — auto push with YouTube thumbnail / featured image
 const express = require('express');
 const webpush = require('web-push');
 const bodyParser = require('body-parser');
@@ -7,27 +7,26 @@ const path = require('path');
 
 const app = express();
 app.use(bodyParser.json({ limit: '5mb' }));
-app.use(express.static('public')); // serve your HTML and sw.js
 
-// --- VAPID keys (replace with your own) ---
+// --- VAPID keys ---
 const VAPID_PUBLIC_KEY = 'BHCiV7I9qgq2eZ9mF7uYXZB9MZC8yI3qT1fS3KpG8vZ3J0e2o0szZlZ2VXz0gH1bT6i2U7sZ2pE6qYbI2fw';
 const VAPID_PRIVATE_KEY = 'dOe2lQmQ1z6pY9WQ3w5eB2fT8cS1mA0uLhKpV9cQ2eI';
 const CONTACT_EMAIL = 'mailto:you@example.com';
 
 webpush.setVapidDetails(CONTACT_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-// --- Store subscriptions ---
+// In-memory subscriptions (replace with DB for production)
 const subscriptions = new Map();
 
-// Return VAPID public key
+// Return public key
 app.get('/vapidPublicKey', (req, res) => res.json({ publicKey: VAPID_PUBLIC_KEY }));
 
-// Save subscription from installed PWA only
+// Save subscription
 app.post('/api/save-subscription', (req, res) => {
   const subscription = req.body;
   if (!subscription?.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
   subscriptions.set(subscription.endpoint, subscription);
-  console.log('Saved PWA subscription:', subscription.endpoint);
+  console.log('Saved subscription:', subscription.endpoint);
   res.json({ ok: true });
 });
 
@@ -43,7 +42,7 @@ async function sendPush(payload) {
   }
 }
 
-// Extract YouTube thumbnail
+// Helper to extract YouTube thumbnail
 function getYouTubeThumbnail(link) {
   if (!link) return null;
   const matchEmbed = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
@@ -58,8 +57,8 @@ function getYouTubeThumbnail(link) {
   return null;
 }
 
-// Watch posts JSON file for new posts
-const postsFile = path.join(__dirname, 'public/index.json');
+// Watch posts file
+const postsFile = path.join(__dirname, 'index.json');
 let knownPosts = new Set();
 
 fs.readFile(postsFile, 'utf8', (err, data) => {
@@ -71,7 +70,7 @@ fs.readFile(postsFile, 'utf8', (err, data) => {
   }
 });
 
-fs.watchFile(postsFile, async () => {
+fs.watchFile(postsFile, async (curr, prev) => {
   try {
     const posts = JSON.parse(fs.readFileSync(postsFile, 'utf8'));
     for (const post of posts) {
@@ -80,7 +79,7 @@ fs.watchFile(postsFile, async () => {
         knownPosts.add(postId);
         console.log('New post detected:', post.title);
 
-        // Choose image: YouTube thumbnail > featured image
+        // Determine image: YouTube thumbnail > featured image
         const image = getYouTubeThumbnail(post.link) || post.featuredImage || post.image || '/icons/custom-notification-icon.png';
 
         // Push payload
