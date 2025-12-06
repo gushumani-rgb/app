@@ -52,11 +52,79 @@ function timeAgo(dateStr){ const d=new Date(dateStr), now=new Date(), diff=Math.
 function makeLink(href,title){ const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=title; return a; }
 function handleImageError(img){ img.onerror=null; img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'); img.alt='no image'; }
 function getYouTubeId(link){ if(!link) return null; try { let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; if(link.includes('youtube.com/watch')){ const urlParams = new URLSearchParams(link.split('?')[1] || ''); return urlParams.get('v'); } return null; } catch(e){ return null; } }
-async function loadPosts(){ try{ const res=await fetch('index.json',{cache:'no-cache'}); if(!res.ok) throw new Error('Failed to fetch index.json'); const data=await res.json(); return Array.isArray(data)?data:[]; } catch(e){ console.warn('Error loading posts:',e); return []; } }
-function renderPosts(posts){ const container=document.getElementById('posts'); container.innerHTML = posts.length ? '' : 'No posts yet.'; posts.sort((a,b)=>new Date(b.date)-new Date(a.date)); posts.forEach(post=>{ const div=document.createElement('div'); div.className='post'; const titleText=post.title?.trim()||'Untitled'; const link=post.link||fixPath(post.content_file||post.path,'post')||'#'; const h2=document.createElement('h2'); h2.appendChild(makeLink(link,titleText)); div.appendChild(h2); let youtubeThumbnail=null; const videoId=post.youtubeId||getYouTubeId(post.link); if(videoId) youtubeThumbnail=`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; const images=[youtubeThumbnail,post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean); const uniqueImages=[...new Set(images)]; uniqueImages.forEach((src,index)=>{ const img=document.createElement('img'); img.src=src; img.alt=titleText; img.decoding='async'; img.width=500; img.height=200; if(index===0){img.loading='eager'; img.setAttribute('fetchpriority','high');} else img.loading='lazy'; img.onerror=()=>handleImageError(img); div.appendChild(img); }); const p=document.createElement('p'); p.className='post-text'; const text=(post.summary||post.excerpt||'').trim(); const maxLength=200; p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text; const readMore=makeLink(link,`Read more about "${titleText}"`); readMore.className='read-more'; p.appendChild(readMore); div.appendChild(p); const d=document.createElement('div'); d.className='date'; d.textContent=post.date?timeAgo(post.date):''; div.appendChild(d); container.appendChild(div); }); }
-(async()=>{ const posts=await loadPosts(); renderPosts(posts); setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000); })();
 
-// --- Smart Filter (ignores "Read more") ---
+async function loadPosts(){ 
+  try{ 
+    const res=await fetch('index.json',{cache:'no-cache'}); 
+    if(!res.ok) throw new Error('Failed to fetch index.json'); 
+    const data=await res.json(); 
+    return Array.isArray(data)?data:[]; 
+  } catch(e){ 
+    console.warn('Error loading posts:',e); 
+    return []; 
+  } 
+}
+
+function renderPosts(posts){ 
+  const container=document.getElementById('posts'); 
+  container.innerHTML = posts.length ? '' : 'No posts yet.'; 
+  posts.sort((a,b)=>new Date(b.date)-new Date(a.date)); 
+  posts.forEach(post=>{ 
+    const div=document.createElement('div'); 
+    div.className='post'; 
+    const titleText=post.title?.trim()||'Untitled'; 
+    const link=post.link||fixPath(post.content_file||post.path,'post')||'#'; 
+    const h2=document.createElement('h2'); 
+    h2.appendChild(makeLink(link,titleText)); 
+    div.appendChild(h2); 
+
+    let youtubeThumbnail=null; 
+    const videoId=post.youtubeId||getYouTubeId(post.link); 
+    if(videoId) youtubeThumbnail=`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; 
+
+    const images=[youtubeThumbnail,post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean); 
+    const uniqueImages=[...new Set(images)]; 
+    uniqueImages.forEach((src,index)=>{ 
+      const img=document.createElement('img'); 
+      img.src=src; 
+      img.alt=titleText; 
+      img.decoding='async'; 
+      img.width=500; 
+      img.height=200; 
+      if(index===0){img.loading='eager'; img.setAttribute('fetchpriority','high');} else img.loading='lazy'; 
+      img.onerror=()=>handleImageError(img); 
+      div.appendChild(img); 
+    }); 
+
+    const p=document.createElement('p'); 
+    p.className='post-text'; 
+    const text=(post.summary||post.excerpt||'').trim(); 
+    const maxLength=200; 
+    p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text; 
+    const readMore=makeLink(link,`Read more about "${titleText}"`); 
+    readMore.className='read-more'; 
+    p.appendChild(readMore); 
+    div.appendChild(p); 
+
+    const d=document.createElement('div'); 
+    d.className='date'; 
+    d.textContent=post.date?timeAgo(post.date):''; 
+    div.appendChild(d); 
+
+    container.appendChild(div); 
+  }); 
+}
+
+(async()=>{
+  const posts=await loadPosts(); 
+  renderPosts(posts); 
+  setInterval(async()=>{ 
+    const p=await loadPosts(); 
+    renderPosts(p); 
+  },30000); 
+})();
+
+// --- Smart Filter ---
 document.getElementById('jsonFilter').addEventListener('input', e => {
   const q = e.target.value.toLowerCase().trim();
   Array.from(document.querySelectorAll('.post')).forEach(node => {
@@ -67,25 +135,21 @@ document.getElementById('jsonFilter').addEventListener('input', e => {
 });
 
 // --- PWA + Push notifications ---
+function isPWA() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
-
-function isPWA() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
 async function subscribeToPush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
   try {
     const reg = await navigator.serviceWorker.register('/sw.js');
-    console.log('Service Worker registered (PWA):', reg.scope);
-
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
 
@@ -103,28 +167,32 @@ async function subscribeToPush() {
       body: JSON.stringify(subscription)
     });
 
-    console.log('Push notifications enabled (PWA)', subscription);
+    console.log('Push notifications enabled', subscription);
   } catch (err) {
-    console.error('Push notification error (PWA):', err);
+    console.error('Push subscription error:', err);
   }
 }
 
-// Subscribe immediately if already installed
+// Auto subscribe if already PWA
 if (isPWA()) subscribeToPush();
 
-// Subscribe when PWA is installed later
-window.addEventListener('appinstalled', () => {
-  console.log('PWA installed!');
-  subscribeToPush();
-});
-
-// Optional: detect beforeinstallprompt for custom install button
+// Auto prompt install if not installed
 let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
+window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  console.log('beforeinstallprompt fired');
-  // You can show a custom "Install" button here
+  setTimeout(async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    }
+  }, 1000);
+});
+
+// Subscribe again on app installed
+window.addEventListener('appinstalled', () => {
+  subscribeToPush();
 });
 </script>
 </body>
