@@ -57,7 +57,22 @@ function renderPosts(posts){ const container=document.getElementById('posts'); c
 document.getElementById('jsonFilter').addEventListener('input', e=>{ const q=e.target.value.toLowerCase().trim(); Array.from(document.querySelectorAll('.post')).forEach(node=>{ const title=node.querySelector('h2')?.innerText.toLowerCase()||''; const excerpt=node.querySelector('p')?.innerText.toLowerCase()||''; node.style.display=!q||title.includes(q)||excerpt.includes(q)?'none':''; }); });
 (async()=>{ const posts=await loadPosts(); renderPosts(posts); setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000); })();
 
-// --- PWA Service Worker + Auto Push Subscription ---
+// --- PWA Browser Install Prompt ---
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  // Automatically show install prompt
+  deferredPrompt.prompt();
+
+  deferredPrompt.userChoice.then((choiceResult) => {
+    console.log('PWA install outcome:', choiceResult.outcome);
+    deferredPrompt = null;
+  });
+});
+
+// --- PWA Service Worker + Push Subscription ---
 if ('serviceWorker' in navigator && 'PushManager' in window) {
   window.addEventListener('load', async () => {
     try {
