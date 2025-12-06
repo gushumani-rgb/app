@@ -44,207 +44,67 @@
 </footer>
 
 <script>
-// --- Helpers ---
 document.getElementById('year').textContent = new Date().getFullYear();
 
-function fixPath(path,type='post'){ 
-  if(!path) return ''; 
-  if(path.startsWith('http')||path.startsWith('/')) return path; 
-  return type==='image'?'Images/'+path:'Posts/'+path; 
-}
+// --- Helpers ---
+function fixPath(path,type='post'){ if(!path) return ''; if(path.startsWith('http')||path.startsWith('/')) return path; return type==='image'?'Images/'+path:'Posts/'+path; }
+function timeAgo(dateStr){ const d=new Date(dateStr), now=new Date(), diff=Math.floor((now-d)/1000); if(diff<60) return diff+' second'+(diff!==1?'s':'')+' ago'; if(diff<3600) return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; if(diff<86400) return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago'; }
+function makeLink(href,title){ const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=title; return a; }
+function handleImageError(img){ img.onerror=null; img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'); img.alt='no image'; }
+function getYouTubeId(link){ if(!link) return null; try { let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; if(link.includes('youtube.com/watch')){ const urlParams = new URLSearchParams(link.split('?')[1] || ''); return urlParams.get('v'); } return null; } catch(e){ return null; } }
+async function loadPosts(){ try{ const res=await fetch('index.json',{cache:'no-cache'}); if(!res.ok) throw new Error('Failed to fetch index.json'); const data=await res.json(); return Array.isArray(data)?data:[]; } catch(e){ console.warn('Error loading posts:',e); return []; } }
+function renderPosts(posts){ const container=document.getElementById('posts'); container.innerHTML = posts.length ? '' : 'No posts yet.'; posts.sort((a,b)=>new Date(b.date)-new Date(a.date)); posts.forEach(post=>{ const div=document.createElement('div'); div.className='post'; const titleText=post.title?.trim()||'Untitled'; const link=post.link||fixPath(post.content_file||post.path,'post')||'#'; const h2=document.createElement('h2'); h2.appendChild(makeLink(link,titleText)); div.appendChild(h2); let youtubeThumbnail=null; const videoId=post.youtubeId||getYouTubeId(post.link); if(videoId) youtubeThumbnail=`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; const images=[youtubeThumbnail,post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean); const uniqueImages=[...new Set(images)]; uniqueImages.forEach((src,index)=>{ const img=document.createElement('img'); img.src=src; img.alt=titleText; img.decoding='async'; img.width=500; img.height=200; if(index===0){img.loading='eager'; img.setAttribute('fetchpriority','high');} else img.loading='lazy'; img.onerror=()=>handleImageError(img); div.appendChild(img); }); const p=document.createElement('p'); p.className='post-text'; const text=(post.summary||post.excerpt||'').trim(); const maxLength=200; p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text; const readMore=makeLink(link,`Read more about "${titleText}"`); readMore.className='read-more'; p.appendChild(readMore); div.appendChild(p); const d=document.createElement('div'); d.className='date'; d.textContent=post.date?timeAgo(post.date):''; div.appendChild(d); container.appendChild(div); }); }
+document.getElementById('jsonFilter').addEventListener('input', e=>{ const q=e.target.value.toLowerCase().trim(); Array.from(document.querySelectorAll('.post')).forEach(node=>{ const title=node.querySelector('h2')?.innerText.toLowerCase()||''; const excerpt=node.querySelector('p')?.innerText.toLowerCase()||''; node.style.display=!q||title.includes(q)||excerpt.includes(q)?'none':''; }); });
+(async()=>{ const posts=await loadPosts(); renderPosts(posts); setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000); })();
 
-function timeAgo(dateStr){ 
-  const d=new Date(dateStr), now=new Date(), diff=Math.floor((now-d)/1000); 
-  if(diff<60) return diff+' second'+(diff!==1?'s':'')+' ago'; 
-  if(diff<3600) return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; 
-  if(diff<86400) return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; 
-  return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago'; 
-}
+// --- PWA Service Worker + Auto Push Subscription ---
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      console.log('Service Worker registered:', reg.scope);
 
-function makeLink(href,title){ 
-  const a=document.createElement('a'); 
-  a.href=href; 
-  a.target='_blank'; 
-  a.rel='noopener noreferrer'; 
-  a.textContent=title; 
-  return a; 
-}
+      // Request Notification permission automatically
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        console.log('Notifications blocked');
+        return;
+      }
 
-function handleImageError(img){ 
-  img.onerror=null; 
-  img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'); 
-  img.alt='no image'; 
-}
+      // Fetch public VAPID key
+      const vapidRes = await fetch('/vapidPublicKey');
+      const { publicKey } = await vapidRes.json();
 
-function getYouTubeId(link){ 
-  if(!link) return null; 
-  try { 
-    let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); 
-    if(match) return match[1]; 
-    match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); 
-    if(match) return match[1]; 
-    if(link.includes('youtube.com/watch')){
-      const urlParams = new URLSearchParams(link.split('?')[1] || ''); 
-      return urlParams.get('v'); 
-    } 
-    return null; 
-  } catch(e){ return null; } 
-}
+      // Subscribe user (or get existing subscription)
+      const subscription = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
 
-async function loadPosts(){ 
-  try{ 
-    const res=await fetch('index.json',{cache:'no-cache'}); 
-    if(!res.ok) throw new Error('Failed to fetch index.json'); 
-    const data=await res.json(); 
-    return Array.isArray(data)?data:[]; 
-  } catch(e){ 
-    console.warn('Error loading posts:',e); 
-    return []; 
-  } 
-}
+      // Send subscription to server
+      await fetch('/api/save-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      });
 
-function renderPosts(posts){ 
-  const container=document.getElementById('posts'); 
-  container.innerHTML = posts.length ? '' : 'No posts yet.'; 
-  posts.sort((a,b)=>new Date(b.date)-new Date(a.date)); 
-  posts.forEach(post=>{ 
-    const div=document.createElement('div'); 
-    div.className='post'; 
-    const titleText=post.title?.trim()||'Untitled'; 
-    const link=post.link||fixPath(post.content_file||post.path,'post')||'#'; 
-    const h2=document.createElement('h2'); 
-    h2.appendChild(makeLink(link,titleText)); 
-    div.appendChild(h2); 
-
-    // YouTube thumbnail
-    let youtubeThumbnail=null; 
-    const videoId=post.youtubeId||getYouTubeId(post.link); 
-    if(videoId) youtubeThumbnail=`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; 
-
-    // Images
-    const images=[youtubeThumbnail,post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean); 
-    const uniqueImages=[...new Set(images)]; 
-    uniqueImages.forEach((src,index)=>{ 
-      const img=document.createElement('img'); 
-      img.src=src; 
-      img.alt=titleText; 
-      img.decoding='async'; 
-      img.width=500; 
-      img.height=200; 
-      if(index===0){img.loading='eager'; img.setAttribute('fetchpriority','high');} else img.loading='lazy'; 
-      img.onerror=()=>handleImageError(img); 
-      div.appendChild(img); 
-    }); 
-
-    const p=document.createElement('p'); 
-    p.className='post-text'; 
-    const text=(post.summary||post.excerpt||'').trim(); 
-    const maxLength=200; 
-    p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text; 
-    const readMore=makeLink(link,`Read more about "${titleText}"`); 
-    readMore.className='read-more'; 
-    p.appendChild(readMore); 
-    div.appendChild(p); 
-
-    const d=document.createElement('div'); 
-    d.className='date'; 
-    d.textContent=post.date?timeAgo(post.date):''; 
-    div.appendChild(d); 
-
-    container.appendChild(div); 
-  }); 
-}
-
-// --- Load and render posts ---
-(async()=>{
-  const posts=await loadPosts(); 
-  renderPosts(posts); 
-  setInterval(async()=>{ 
-    const p=await loadPosts(); 
-    renderPosts(p); 
-  },30000); 
-})();
-
-// --- Filter posts ---
-document.getElementById('jsonFilter').addEventListener('input', e=>{ 
-  const q=e.target.value.toLowerCase().trim(); 
-  Array.from(document.querySelectorAll('.post')).forEach(node=>{
-    const title=node.querySelector('h2')?.innerText.toLowerCase()||''; 
-    const excerpt=node.querySelector('p')?.innerText.toLowerCase()||''; 
-    node.style.display=!q||title.includes(q)||excerpt.includes(q)?'':'none'; 
-  }); 
-});
-
-// --- PWA helpers ---
-function isPWA() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      console.log('Push notifications enabled', subscription);
+    } catch (err) {
+      console.error('Push notification error:', err);
+    }
+  });
 }
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-}
-
-// --- Install prompt on browser ---
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-
-  if (!isPWA()) {
-    setTimeout(async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      console.log('Install prompt choice:', choice.outcome);
-      deferredPrompt = null;
-    }, 500);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
   }
-});
-
-// --- Push notifications in PWA ---
-async function subscribeToPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    console.log('Service Worker registered:', reg.scope);
-
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.log('Push notifications blocked');
-      return;
-    }
-
-    const res = await fetch('/vapidPublicKey');
-    const { publicKey } = await res.json();
-
-    const subscription = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey)
-    });
-
-    await fetch('/api/save-subscription', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(subscription)
-    });
-
-    console.log('Push notifications enabled', subscription);
-  } catch (err) {
-    console.error('Push subscription error:', err);
-  }
+  return outputArray;
 }
-
-// Auto subscribe only if PWA
-if (isPWA()) subscribeToPush();
-
-// Re-subscribe on appinstalled
-window.addEventListener('appinstalled', () => {
-  console.log('App installed!');
-  if (isPWA()) subscribeToPush();
-});
 </script>
 </body>
 </html>
