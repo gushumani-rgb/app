@@ -15,7 +15,7 @@ app.use(express.static(__dirname));
 // --- VAPID keys (prefer environment variables) ---
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BHCiV7I9qgq2eZ9mF7uYXZB9MZC8yI3qT1fS3KpG8vZ3J0e2o0szZlZ2VXz0gH1bT6i2U7sZ2pE6qYbI2fw';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'dOe2lQmQ1z6pY9WQ3w5eB2fT8cS1mA0uLhKpV9cQ2eI';
-const CONTACT_EMAIL = process.env.VAPID_CONTACT || 'gushumani@gmail.com;
+const CONTACT_EMAIL = process.env.VAPID_CONTACT || 'mailto:you@example.com';
 
 if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
   console.warn('Warning: Missing VAPID keys. Generate them with: npx web-push generate-vapid-keys');
@@ -144,7 +144,7 @@ async function sendPushToAll(payload, batchSize = 20) {
   return results;
 }
 
-// --- Watch posts folder for new posts using chokidar (more reliable than fs.watch) ---
+// --- Watch posts folder for new posts using chokidar ---
 const postsFolder = path.join(__dirname, 'posts');
 const knownPosts = new Set();
 
@@ -161,7 +161,7 @@ try {
   console.error('Failed to read posts folder:', err);
 }
 
-// Use chokidar to watch for new directories (new post folders)
+// Watch for new directories (new posts)
 const watcher = chokidar.watch(postsFolder, {
   ignoreInitial: true,
   depth: 1,
@@ -171,7 +171,7 @@ const watcher = chokidar.watch(postsFolder, {
   }
 });
 
-// when a directory is added
+// --- New post watcher ---
 watcher.on('addDir', async (dirPath) => {
   const folderName = path.basename(dirPath);
   if (knownPosts.has(folderName)) return;
@@ -181,24 +181,23 @@ watcher.on('addDir', async (dirPath) => {
   // default metadata
   let title = 'Untitled';
   let summary = 'Check out our latest post!';
-  let image = '/icons/notification-badge.png'; // default icon
+  let image = '/icons/notification-badge.png';
 
   const jsonFile = path.join(dirPath, 'index.json');
   try {
     if (fs.existsSync(jsonFile)) {
       const raw = fs.readFileSync(jsonFile, 'utf8');
       const data = JSON.parse(raw);
+
       if (data.title) title = data.title;
-      if (data.summary) summary = data.summary;
-      if (data.image) image = data.image;
-    } else {
-      // optional: try to read index.html and extract <title> if you want
+      if (data.excerpt) summary = data.excerpt;             // matches your index.json
+      if (data.featuredImage) image = data.featuredImage;  // matches your index.json
     }
   } catch (err) {
     console.warn('Failed to read index.json for', folderName, err);
   }
 
-  const htmlFilePath = `/posts/${folderName}/index.html`; // link for service worker to open
+  const htmlFilePath = `/posts/${folderName}/index.html`;
   const payload = {
     title: 'New Post: ' + title,
     body: summary,
@@ -216,10 +215,9 @@ watcher.on('addDir', async (dirPath) => {
   }
 });
 
-// Optional: watch for new single-file posts (e.g., posts/slug.html) — enable if you use that pattern
+// Optional: watch for new single-file posts under /posts/*.html
 watcher.on('add', async (filePath) => {
-  // you can implement logic here if you publish single-file posts under /posts/*.html
-  // example: if filePath endsWith .html and is directly under /posts, notify
+  // implement logic if you publish single-file posts directly
 });
 
 // --- Start server ---
