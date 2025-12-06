@@ -21,9 +21,6 @@
   .post-skeleton {background:#eceff6;border-radius:12px;height:200px;margin-bottom:14px;animation:pulse 1.2s infinite;}
   @keyframes pulse {0% {opacity:1;}50% {opacity:0.4;}100% {opacity:1;}}
   #posts {min-height:500px;}
-  #fullPost {max-width:800px;margin:36px auto;padding:20px;display:none;}
-  #fullPost img {width:100%;height:auto;margin:12px 0;border-radius:8px;}
-  #fullPost h2 {margin-top:0;}
 </style>
 </head>
 <body>
@@ -39,7 +36,6 @@
       <div class="post-skeleton"></div>
       <div class="post-skeleton"></div>
     </div>
-    <div id="fullPost"></div>
   </div>
 </main>
 
@@ -65,41 +61,34 @@ function timeAgo(dateStr){
   return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago'; 
 }
 
+function makeLink(href,title){ 
+  const a=document.createElement('a'); 
+  a.href=href; 
+  a.target='_blank'; 
+  a.rel='noopener noreferrer'; 
+  a.textContent=title; 
+  return a; 
+}
+
 function handleImageError(img){ 
   img.onerror=null; 
-  img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'); 
+  img.src='data:image/svg+xml;utf8,'+encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'
+  ); 
   img.alt='no image'; 
 }
 
 function getYouTubeId(link){ 
   if(!link) return null; 
   try { 
-    let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); 
-    if(match) return match[1]; 
-    match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); 
-    if(match) return match[1]; 
-    if(link.includes('youtube.com/watch')){
+    let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; 
+    match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; 
+    if(link.includes('youtube.com/watch')){ 
       const urlParams = new URLSearchParams(link.split('?')[1] || ''); 
       return urlParams.get('v'); 
     } 
     return null; 
   } catch(e){ return null; } 
-}
-
-function makeLink(href,title){ 
-  const a=document.createElement('a'); 
-  a.href=href; 
-  a.textContent=title; 
-  a.dataset.fullPost = 'true'; 
-  return a; 
-}
-
-function normalizePath(path) { 
-  if (!path) return '/'; 
-  if (!path.startsWith('/')) path = '/' + path; 
-  if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1); 
-  if (path.endsWith('/index.html')) path = path.slice(0, -10); 
-  return path; 
 }
 
 // --- Load posts ---
@@ -118,182 +107,129 @@ async function loadPosts(){
 // --- Render posts ---
 function renderPosts(posts){
   const container=document.getElementById('posts'); 
-  container.innerHTML = posts.length ? '' : 'No posts yet.';
-  posts.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  container.innerHTML = posts.length ? '' : 'No posts yet.'; 
+
+  posts.sort((a,b)=>new Date(b.date)-new Date(a.date)); 
 
   posts.forEach(post=>{
     const div=document.createElement('div'); 
-    div.className='post';
+    div.className='post'; 
 
-    const titleText=post.title?.trim()||'Untitled';
-    const link=post.link||fixPath(post.content_file||post.path,'post')||'#';
+    const titleText=post.title?.trim()||'Untitled'; 
+    const link=post.link||fixPath(post.content_file||post.path,'post')||'#'; 
 
-    // --- Title ---
-    const h2=document.createElement('h2');
-    const titleLink=document.createElement('a');
-    titleLink.href = link;
-    titleLink.textContent = titleText;
-    titleLink.dataset.fullPost = 'true';
-    h2.appendChild(titleLink); 
-    div.appendChild(h2);
+    const h2=document.createElement('h2'); 
+    h2.appendChild(makeLink(link,titleText)); 
+    div.appendChild(h2); 
 
-    // --- Images ---
-    const images=[];
-    const videoId=post.youtubeId||getYouTubeId(post.link);
-    if(videoId) images.push(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`);
-    if(post.image) images.push(fixPath(post.image,'image'));
-    if(post.featuredImage) images.push(fixPath(post.featuredImage,'image'));
-    [...new Set(images)].forEach((src,index)=>{
+    // Images
+    let youtubeThumbnail=null; 
+    const videoId=post.youtubeId||getYouTubeId(post.link); 
+    if(videoId) youtubeThumbnail=`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; 
+
+    const images=[youtubeThumbnail,post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean); 
+    const uniqueImages=[...new Set(images)]; 
+
+    uniqueImages.forEach((src,index)=>{
       const img=document.createElement('img'); 
-      img.src=src; 
-      img.alt=titleText; 
-      img.decoding='async'; 
-      img.width=500; 
-      img.height=200;
-      if(index===0){img.loading='eager'; img.setAttribute('fetchpriority','high');} else img.loading='lazy';
+      img.src=src; img.alt=titleText; 
+      img.decoding='async'; img.width=500; img.height=200; 
+      if(index===0){ img.loading='eager'; img.setAttribute('fetchpriority','high'); } 
+      else img.loading='lazy'; 
       img.onerror=()=>handleImageError(img); 
-      div.appendChild(img);
-    });
+      div.appendChild(img); 
+    }); 
 
-    // --- Summary & Read More ---
+    // Summary
     const p=document.createElement('p'); 
-    p.className='post-text';
-    const text=(post.summary||post.excerpt||'').trim();
+    p.className='post-text'; 
+    const text=(post.summary||post.excerpt||'').trim(); 
     const maxLength=200; 
-    p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text;
+    p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text; 
+    const readMore=makeLink(link,`Read more about "${titleText}"`); 
+    readMore.className='read-more'; 
+    p.appendChild(readMore); 
+    div.appendChild(p); 
 
-    const readMore = makeLink(link, `Read more about "${titleText}"`);
-    readMore.className = 'read-more';
-    p.appendChild(readMore);
-    div.appendChild(p);
-
-    // --- Date ---
+    // Date
     const d=document.createElement('div'); 
     d.className='date'; 
     d.textContent=post.date?timeAgo(post.date):''; 
-    div.appendChild(d);
+    div.appendChild(d); 
 
-    container.appendChild(div);
-  });
+    container.appendChild(div); 
+  }); 
 }
 
-// --- JSON Filter ---
+// --- Filter posts ---
 document.getElementById('jsonFilter').addEventListener('input', e=>{
-  const q=e.target.value.toLowerCase().trim();
+  const q=e.target.value.toLowerCase().trim(); 
   Array.from(document.querySelectorAll('.post')).forEach(node=>{
-    const title=node.querySelector('h2')?.innerText.toLowerCase()||'';
-    const excerpt=node.querySelector('p')?.innerText.toLowerCase()||'';
-    node.style.display = !q || title.includes(q) || excerpt.includes(q) ? 'block':'none';
-  });
+    const title=node.querySelector('h2')?.innerText.toLowerCase()||''; 
+    const excerpt=node.querySelector('p')?.innerText.toLowerCase()||''; 
+    node.style.display = (!q || title.includes(q) || excerpt.includes(q)) ? 'block' : 'none';
+  }); 
 });
 
-// --- SPA Full Post Navigation ---
-let postsCache = [];
-let scrollPositions = {};
-const postsDiv = document.getElementById('posts');
-const fullPostDiv = document.getElementById('fullPost');
-
-function showFullPost(url) {
-  const post = postsCache.find(p => normalizePath(p.link||p.path||p.content_file) === normalizePath(url));
-  if(!post) return window.location.href = url; // fallback
-  postsDiv.style.display = 'none';
-  fullPostDiv.innerHTML = '';
-  fullPostDiv.style.display = 'block';
-
-  const h2 = document.createElement('h2'); h2.textContent = post.title||'Untitled';
-  fullPostDiv.appendChild(h2);
-
-  const images=[];
-  const videoId=post.youtubeId||getYouTubeId(post.link);
-  if(videoId) images.push(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`);
-  if(post.image) images.push(fixPath(post.image,'image'));
-  if(post.featuredImage) images.push(fixPath(post.featuredImage,'image'));
-  [...new Set(images)].forEach(src=>{
-    const img=document.createElement('img'); img.src=src; img.alt=post.title;
-    img.onerror=()=>handleImageError(img);
-    fullPostDiv.appendChild(img);
-  });
-
-  const p=document.createElement('div');
-  if(post.content_file){
-    p.innerHTML = `<iframe src="${fixPath(post.content_file,'post')}" width="100%" style="min-height:300px;"></iframe>`;
-  } else {
-    p.textContent = post.summary||post.excerpt||'';
-  }
-  fullPostDiv.appendChild(p);
-
-  history.pushState({fullPost:true,url}, '', url);
-}
-
-document.addEventListener('click', e => {
-  const a = e.target.closest('a[data-full-post]');
-  if(a){
-    e.preventDefault();
-    scrollPositions[window.location.pathname] = window.scrollY;
-    showFullPost(a.getAttribute('href'));
-  }
-});
-
-window.addEventListener('popstate', e=>{
-  if(e.state && e.state.fullPost){
-    fullPostDiv.style.display='none';
-    postsDiv.style.display='block';
-    const pos = scrollPositions[window.location.pathname]||0;
-    window.scrollTo(0,pos);
-  }
-});
-
-// --- Initial load ---
+// --- Load & refresh posts ---
 (async()=>{
-  postsCache = await loadPosts();
-  renderPosts(postsCache);
+  const posts=await loadPosts(); 
+  renderPosts(posts); 
+  setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000); 
 })();
 
-// --- PWA Service Worker + Push Notifications ---
-if('serviceWorker' in navigator && 'PushManager' in window){
-  let swRegistration=null;
-  window.addEventListener('load', async()=>{
-    try{ 
-      swRegistration=await navigator.serviceWorker.register('/sw.js'); 
+// --- PWA Service Worker + Push Subscription on First Click ---
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+  let swRegistration = null;
+
+  window.addEventListener('load', async () => {
+    try {
+      swRegistration = await navigator.serviceWorker.register('/sw.js');
       console.log('Service Worker registered:', swRegistration.scope);
-    } catch(err){ 
-      console.error('Service Worker registration failed:',err);
+    } catch (err) {
+      console.error('Service Worker registration failed:', err);
     }
   });
 
-  async function subscribeUser(){
-    try{
-      const reg=swRegistration||await navigator.serviceWorker.ready;
-      const permission=await Notification.requestPermission();
-      if(permission!=='granted'){ console.log('Notifications blocked'); return; }
-      const vapidRes=await fetch('/vapidPublicKey');
-      const { publicKey }=await vapidRes.json();
-      const subscription=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({
-        userVisibleOnly:true, 
-        applicationServerKey:urlBase64ToUint8Array(publicKey)
+  async function subscribeUser() {
+    try {
+      const reg = swRegistration || await navigator.serviceWorker.ready;
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+
+      const vapidRes = await fetch('/vapidPublicKey');
+      const { publicKey } = await vapidRes.json();
+
+      const subscription = await reg.pushManager.getSubscription() ||
+        await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+      await fetch('/api/save-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
       });
-      await fetch('/api/save-subscription',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(subscription)
-      });
-      console.log('Push subscription saved!',subscription);
-    }catch(err){ console.error('Push subscription failed:',err);}
+
+      console.log('Push subscription saved to server!', subscription);
+    } catch (err) {
+      console.error('Push subscription failed:', err);
+    }
   }
 
-  function handleFirstClick(){ 
-    window.removeEventListener('click',handleFirstClick,{passive:true}); 
-    subscribeUser(); 
+  function handleFirstClick() {
+    window.removeEventListener('click', handleFirstClick, { passive: true });
+    subscribeUser();
   }
-  window.addEventListener('click',handleFirstClick,{passive:true});
+  window.addEventListener('click', handleFirstClick, { passive: true });
 }
 
-// --- VAPID helper ---
-function urlBase64ToUint8Array(base64String){ 
-  const padding='='.repeat((4-(base64String.length%4))%4); 
-  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/'); 
-  const rawData=window.atob(base64); 
-  return Uint8Array.from([...rawData].map(c=>c.charCodeAt(0))); 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 </script>
 </body>
