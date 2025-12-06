@@ -1,3 +1,4 @@
+// sw.js — full PWA service worker (precache + runtime cache + push notifications)
 
 const CACHE_NAME = 'site-cache-v1';
 const PRECACHE = [
@@ -29,47 +30,112 @@ const PRECACHE = [
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return Promise.all(
-        PRECACHE.map(u => cache.add(new Request(u, {credentials: 'same-origin'}))).catch(err => {
-          console.warn('Some resources failed to cache:', err);
-        })
-      );
+    caches.open(CACHE_NAME).then(async cache => {
+      try {
+        const results = await Promise.allSettled(PRECACHE.map(url =>
+          cache.add(new Request(url, { credentials: 'same-origin' }))
+        ));
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length) console.warn('sw: precache failures', failures);
+      } catch (err) {
+        console.warn('sw: precache error', err);
+      }
     })
   );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-    )).then(() => self.clients.claim())
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-        return res;
+      fetch(req).then(networkRes => {
+        const copy = networkRes.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          if (networkRes && networkRes.ok) cache.put(req, copy).catch(()=>{});
+        });
+        return networkRes;
       }).catch(() => caches.match('/'))
     );
     return;
   }
+
   event.respondWith(
-    caches.match(req).then(cached => cached || fetch(req).then(networkRes => {
-      try {
-        const url = new URL(req.url);
-        if (url.origin === location.origin || url.href.startsWith('http')) {
-          const copy = networkRes.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-        }
-      } catch(e) {}
-      return networkRes;
-    })).catch(() => caches.match('/'))
+    caches.match(req).then(cached => {
+      if (cached) return cached;
+      return fetch(req).then(networkRes => {
+        if (!networkRes || !networkRes.ok) return networkRes;
+        const copy = networkRes.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(req, copy).catch(()=>{}));
+        return networkRes;
+      }).catch(() => caches.match('/'));
+    })
   );
+});
+
+// Push handler (receives payload from server push)
+self.addEventListener('push', (event) => {
+  let payload = {};
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch (e) {
+      payload = { body: event.data.text() };
+    }
+  }
+
+  const title = payload.title || 'Notification Title';
+  const options = {
+    body: payload.body || 'Notification Body Text',
+    icon: payload.icon || '/icons/custom-notification-icon.png',
+    badge: payload.badge || '/icons/notification-badge.png',
+    data: payload.data || { path: '/' },
+    tag: payload.tag || undefined,
+    renotify: payload.renotify || false,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Notification click — open or focus the client, navigate if needed
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const notificationData = event.notification && event.notification.data ? event.notification.data : {};
+  const targetPath = notificationData.path || '/';
+  const targetUrl = self.location.origin + targetPath;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (const client of windowClients) {
+        if (client.url && 'focus' in client) {
+          if (client.url === targetUrl) {
+            return client.focus();
+          } else if (client.navigate) {
+            client.focus();
+            return client.navigate(targetPath);
+          } else {
+            client.focus();
+            return;
+          }
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+    })
+  );
+});
+
+// Optional: pushsubscriptionchange event for subscription rotation
+self.addEventListener('pushsubscriptionchange', (event) => {
+  console.info('sw: pushsubscriptionchange', event);
 });
