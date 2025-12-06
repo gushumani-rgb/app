@@ -15,7 +15,7 @@ app.use(express.static(__dirname));
 // --- VAPID keys (prefer environment variables) ---
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BHCiV7I9qgq2eZ9mF7uYXZB9MZC8yI3qT1fS3KpG8vZ3J0e2o0szZlZ2VXz0gH1bT6i2U7sZ2pE6qYbI2fw';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'dOe2lQmQ1z6pY9WQ3w5eB2fT8cS1mA0uLhKpV9cQ2eI';
-const CONTACT_EMAIL = process.env.VAPID_CONTACT || 'mailto:you@example.com';
+const CONTACT_EMAIL = process.env.VAPID_CONTACT || 'mailto:gushumani@gmail.com;
 
 if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
   console.warn('Warning: Missing VAPID keys. Generate them with: npx web-push generate-vapid-keys');
