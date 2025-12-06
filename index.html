@@ -57,46 +57,35 @@ function renderPosts(posts){ const container=document.getElementById('posts'); c
 document.getElementById('jsonFilter').addEventListener('input', e=>{ const q=e.target.value.toLowerCase().trim(); Array.from(document.querySelectorAll('.post')).forEach(node=>{ const title=node.querySelector('h2')?.innerText.toLowerCase()||''; const excerpt=node.querySelector('p')?.innerText.toLowerCase()||''; node.style.display=!q||title.includes(q)||excerpt.includes(q)?'none':''; }); });
 (async()=>{ const posts=await loadPosts(); renderPosts(posts); setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000); })();
 
-// --- PWA Browser Install Prompt ---
-let deferredPrompt;
+// --- Browser default install prompt ---
 window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent default but do not create button
   e.preventDefault();
-  deferredPrompt = e;
-
-  // Automatically show install prompt
-  deferredPrompt.prompt();
-
-  deferredPrompt.userChoice.then((choiceResult) => {
-    console.log('PWA install outcome:', choiceResult.outcome);
-    deferredPrompt = null;
-  });
+  console.log('Install prompt ready — browser will show default notification automatically when eligible');
 });
 
-// --- PWA Service Worker + Push Subscription ---
-if ('serviceWorker' in navigator && 'PushManager' in window) {
+// --- PWA Push Subscription ---
+if ((window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) && 'serviceWorker' in navigator && 'PushManager' in window) {
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('/sw.js');
       console.log('Service Worker registered:', reg.scope);
 
-      // Request Notification permission automatically
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         console.log('Notifications blocked');
         return;
       }
 
-      // Fetch public VAPID key
       const vapidRes = await fetch('/vapidPublicKey');
       const { publicKey } = await vapidRes.json();
 
-      // Subscribe user (or get existing subscription)
-      const subscription = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-      });
+      const subscription = await reg.pushManager.getSubscription() ||
+        await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
 
-      // Send subscription to server
       await fetch('/api/save-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
