@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anywhere Income – Work from Anywhere & Earn Online in 2025</title>
+<meta name="description" content="Anywhere Income 2025: Discover remote jobs, online earning tips, and guides to make money from home effortlessly.">
 <link rel="manifest" href="/manifest.json">
 <link rel="alternate" type="application/json" href="/index.json">
 <style>
-  /* Your CSS styling from before */
   body {margin:0;font-family:Arial,sans-serif;background:#f7f8fb;color:#4a5568;}
   .wrap {max-width:800px;margin:36px auto;padding:20px;}
   h1 {text-align:center;color:#0b63b8;margin-bottom:24px;}
@@ -24,97 +24,90 @@
 </style>
 </head>
 <body>
-<header class="wrap">
+<header class="wrap" role="banner" aria-label="Site header">
   <h1 id="site-title">Anywhere Income</h1>
 </header>
 
-<main class="wrap">
-  <input id="jsonFilter" class="search" placeholder="Filter posts...">
-  <div id="posts">
-    <div class="post-skeleton"></div>
-    <div class="post-skeleton"></div>
-    <div class="post-skeleton"></div>
+<main id="maincontent" role="main" tabindex="-1">
+  <div class="wrap">
+    <input id="jsonFilter" class="search" placeholder="Filter posts...">
+    <div id="posts">
+      <div class="post-skeleton"></div>
+      <div class="post-skeleton"></div>
+      <div class="post-skeleton"></div>
+    </div>
   </div>
 </main>
 
-<footer class="wrap" style="text-align:center;padding:12px;color:#4a5568;">
+<footer class="wrap" role="contentinfo" aria-label="Site footer" style="text-align:center;padding:12px;color:#4a5568;">
   <small>&copy; <span id="year"></span> Anywhere Income</small>
 </footer>
 
 <script>
-// -------------------- Year & Helpers --------------------
 document.getElementById('year').textContent = new Date().getFullYear();
 
-// (Helper functions: fixPath, timeAgo, makeLink, handleImageError, getYouTubeId, loadPosts, renderPosts)
-// Use the same helpers as in previous snippet
+// --- Helpers ---
+function fixPath(path,type='post'){ if(!path) return ''; if(path.startsWith('http')||path.startsWith('/')) return path; return type==='image'?'Images/'+path:'Posts/'+path; }
+function timeAgo(dateStr){ const d=new Date(dateStr), now=new Date(), diff=Math.floor((now-d)/1000); if(diff<60) return diff+' second'+(diff!==1?'s':'')+' ago'; if(diff<3600) return Math.floor(diff/60)+' minute'+(Math.floor(diff/60)!==1?'s':'')+' ago'; if(diff<86400) return Math.floor(diff/3600)+' hour'+(Math.floor(diff/3600)!==1?'s':'')+' ago'; return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)!==1?'s':'')+' ago'; }
+function makeLink(href,title){ const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=title; return a; }
+function handleImageError(img){ img.onerror=null; img.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200"><rect width="100%" height="100%" fill="#eceff6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa3b2" font-size="14">no image</text></svg>'); img.alt='no image'; }
+function getYouTubeId(link){ if(!link) return null; try { let match = link.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; match = link.match(/youtu\.be\/([a-zA-Z0-9_-]+)/); if(match) return match[1]; if(link.includes('youtube.com/watch')){ const urlParams = new URLSearchParams(link.split('?')[1] || ''); return urlParams.get('v'); } return null; } catch(e){ return null; } }
+async function loadPosts(){ try{ const res=await fetch('index.json',{cache:'no-cache'}); if(!res.ok) throw new Error('Failed to fetch index.json'); const data=await res.json(); return Array.isArray(data)?data:[]; } catch(e){ console.warn('Error loading posts:',e); return []; } }
+function renderPosts(posts){ const container=document.getElementById('posts'); container.innerHTML = posts.length ? '' : 'No posts yet.'; posts.sort((a,b)=>new Date(b.date)-new Date(a.date)); posts.forEach(post=>{ const div=document.createElement('div'); div.className='post'; const titleText=post.title?.trim()||'Untitled'; const link=post.link||fixPath(post.content_file||post.path,'post')||'#'; const h2=document.createElement('h2'); h2.appendChild(makeLink(link,titleText)); div.appendChild(h2); let youtubeThumbnail=null; const videoId=post.youtubeId||getYouTubeId(post.link); if(videoId) youtubeThumbnail=`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`; const images=[youtubeThumbnail,post.image&&fixPath(post.image,'image'),post.featuredImage&&fixPath(post.featuredImage,'image')].filter(Boolean); const uniqueImages=[...new Set(images)]; uniqueImages.forEach((src,index)=>{ const img=document.createElement('img'); img.src=src; img.alt=titleText; img.decoding='async'; img.width=500; img.height=200; if(index===0){img.loading='eager'; img.setAttribute('fetchpriority','high');} else img.loading='lazy'; img.onerror=()=>handleImageError(img); div.appendChild(img); }); const p=document.createElement('p'); p.className='post-text'; const text=(post.summary||post.excerpt||'').trim(); const maxLength=200; p.textContent=text.length>maxLength?text.slice(0,maxLength)+'… ':text; const readMore=makeLink(link,`Read more about "${titleText}"`); readMore.className='read-more'; p.appendChild(readMore); div.appendChild(p); const d=document.createElement('div'); d.className='date'; d.textContent=post.date?timeAgo(post.date):''; div.appendChild(d); container.appendChild(div); }); }
+document.getElementById('jsonFilter').addEventListener('input', e=>{ const q=e.target.value.toLowerCase().trim(); Array.from(document.querySelectorAll('.post')).forEach(node=>{ const title=node.querySelector('h2')?.innerText.toLowerCase()||''; const excerpt=node.querySelector('p')?.innerText.toLowerCase()||''; node.style.display=!q||title.includes(q)||excerpt.includes(q)?'none':''; }); });
+(async()=>{ const posts=await loadPosts(); renderPosts(posts); setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000); })();
 
-// -------------------- Filter --------------------
-document.getElementById('jsonFilter').addEventListener('input', e=>{
-  const q=e.target.value.toLowerCase().trim();
-  Array.from(document.querySelectorAll('.post')).forEach(node=>{
-    const title=node.querySelector('h2')?.innerText.toLowerCase()||'';
-    const excerpt=node.querySelector('p')?.innerText.toLowerCase()||'';
-    node.style.display=!q||title.includes(q)||excerpt.includes(q)?'':'none';
-  });
-});
-
-// -------------------- Load posts --------------------
-(async()=>{
-  const posts=await loadPosts();
-  renderPosts(posts);
-  setInterval(async()=>{ const p=await loadPosts(); renderPosts(p); },30000);
-})();
-
-// -------------------- Browser Install Prompt --------------------
-window.addEventListener('beforeinstallprompt', (e)=>{
+// --- Browser default install prompt ---
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent default but do not create button
   e.preventDefault();
-  console.log('Browser install prompt ready — browser handles display automatically');
+  console.log('Install prompt ready — browser will show default notification automatically when eligible');
 });
 
-// -------------------- PWA Push Subscription --------------------
-function isPWA(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true; }
+// --- PWA Push Subscription ---
+if ((window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) && 'serviceWorker' in navigator && 'PushManager' in window) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      console.log('Service Worker registered:', reg.scope);
 
-async function subscribePush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    console.log('Service Worker registered:', reg.scope);
-
-    if (Notification.permission !== 'granted') {
       const permission = await Notification.requestPermission();
-      if (permission !== 'granted') return console.log('Notifications denied');
-    }
+      if (permission !== 'granted') {
+        console.log('Notifications blocked');
+        return;
+      }
 
-    const vapidRes = await fetch('/vapidPublicKey');
-    const { publicKey } = await vapidRes.json();
+      const vapidRes = await fetch('/vapidPublicKey');
+      const { publicKey } = await vapidRes.json();
 
-    let subscription = await reg.pushManager.getSubscription();
-    if (!subscription) {
-      subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      const subscription = await reg.pushManager.getSubscription() ||
+        await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+      await fetch('/api/save-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
       });
+
+      console.log('Push notifications enabled', subscription);
+    } catch (err) {
+      console.error('Push notification error:', err);
     }
-
-    await fetch('/api/save-subscription', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(subscription)
-    });
-
-    console.log('Push notifications enabled for PWA', subscription);
-  } catch (err) {
-    console.error('Push subscription failed', err);
-  }
+  });
 }
 
-window.addEventListener('load', ()=>{ if(isPWA()) subscribePush(); });
-
-function urlBase64ToUint8Array(base64String){
-  const padding='='.repeat((4-(base64String.length%4))%4);
-  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
-  const rawData=window.atob(base64);
-  return Uint8Array.from([...rawData].map(c=>c.charCodeAt(0)));
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 </script>
 </body>
