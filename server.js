@@ -10,7 +10,7 @@ app.use(bodyParser.json({ limit: '5mb' }));
 // --- VAPID keys (replace with your own or use the ones included here) ---
 const VAPID_PUBLIC_KEY = 'BHCiV7I9qgq2eZ9mF7uYXZB9MZC8yI3qT1fS3KpG8vZ3J0e2o0szZlZ2VXz0gH1bT6i2U7sZ2pE6qYbI2fw';
 const VAPID_PRIVATE_KEY = 'dOe2lQmQ1z6pY9WQ3w5eB2fT8cS1mA0uLhKpV9cQ2eI';
-const CONTACT_EMAIL = 'mailto:you@example.com'; // change to your contact email
+const CONTACT_EMAIL = 'gushumani@gmail.com'; // change to your contact email
 
 webpush.setVapidDetails(CONTACT_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
