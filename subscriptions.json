@@ -1,1 +1,10 @@
-
+[
+  {
+    "endpoint": "https://fcm.googleapis.com/fcm/send/fake-endpoint-123456",
+    "expirationTime": null,
+    "keys": {
+      "p256dh": "BEl4yGZ2FakePublicKey1234567890abcdef",
+      "auth": "fakeAuthKey1234567890"
+    }
+  }
+]
