@@ -1,4 +1,4 @@
-name: Build index & subscriptions JSON
+name: Build index JSON & service worker
 
 on:
   push:
@@ -9,7 +9,6 @@ on:
 env:
   POSTS_DIR: posts
   INDEX_PATH: index.json
-  SUBS_PATH: subscriptions.json  # New
 
 permissions:
   contents: write
@@ -33,7 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install beautifulsoup4 pyyaml python-dateutil pytz
 
-      - name: Build index.json and subscriptions.json
+      - name: Build index.json
         run: |
           python - <<'PY'
           import os, json, re
@@ -43,14 +42,11 @@ jobs:
           from dateutil import parser as dateparser
           from datetime import datetime, timezone, timedelta
 
-          # --- Config ---
           TZ_OFFSET = timezone(timedelta(hours=2))  # UTC+2
           root = Path.cwd()
           posts_root = root / os.environ.get("POSTS_DIR", "posts")
           index_path = root / os.environ.get("INDEX_PATH", "index.json")
-          subs_path = root / os.environ.get("SUBS_PATH", "subscriptions.json")
 
-          # --- Helper functions ---
           def read_file(p):
               try:
                   return p.read_text(encoding='utf-8', errors='ignore')
@@ -93,7 +89,6 @@ jobs:
                   return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
               return None
 
-          # --- Build index.json ---
           posts = []
 
           if posts_root.exists():
@@ -188,6 +183,19 @@ jobs:
                               dt_obj = None
 
                       if not dt_obj:
+                          soup_date = BeautifulSoup(body, 'html.parser')
+                          pdate = soup_date.find('p', class_='post-date')
+                          if pdate:
+                              try:
+                                  parsed = dateparser.parse(pdate.get_text(strip=True))
+                                  if parsed:
+                                      if not parsed.tzinfo:
+                                          parsed = parsed.replace(tzinfo=timezone.utc)
+                                      dt_obj = parsed.astimezone(TZ_OFFSET)
+                              except Exception:
+                                  dt_obj = None
+
+                      if not dt_obj:
                           dt_obj = mtime_dt
 
                       posts.append({
@@ -207,21 +215,22 @@ jobs:
           if not posts:
               posts = [{"title": "No posts yet", "excerpt": "", "path": "/", "source": ""}]
 
-          posts_sorted = sorted(posts, key=lambda x: dateparser.parse(x['date']).timestamp(), reverse=True)
-          index_path.write_text(json.dumps(posts_sorted, indent=2, ensure_ascii=False), encoding='utf-8')
-          print(f"Written {index_path} with {len(posts_sorted)} posts.")
+          def sort_key(item):
+              try:
+                  return dateparser.parse(item.get('date')).timestamp()
+              except:
+                  return 0
 
-          # --- Build empty subscriptions.json if not exists ---
-          if not subs_path.exists():
-              subs_path.write_text(json.dumps({}, indent=2), encoding='utf-8')
-              print(f"Created empty {subs_path}.")
+          posts_sorted = sorted(posts, key=sort_key, reverse=True)
+          index_path.write_text(json.dumps(posts_sorted, indent=2, ensure_ascii=False), encoding='utf-8')
+          print(f"Written {index_path} with {len(posts_sorted)} posts (UTC+2).")
           PY
 
-      - name: Commit and push JSON files
+      - name: Commit and push JSON
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git pull --rebase --autostash origin main
-          git add index.json subscriptions.json
-          git commit -m "Update index.json and subscriptions.json [skip ci]" || echo "Nothing to commit"
+          git add index.json
+          git commit -m "Update index.json [skip ci]" || echo "Nothing to commit"
           git push origin main
