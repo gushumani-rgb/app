@@ -1,9 +1,12 @@
 // sw.js — Service Worker for PWA notifications
+
+// Install event
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   console.log('Service Worker installed');
 });
 
+// Activate event
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
   console.log('Service Worker activated');
@@ -19,13 +22,14 @@ self.addEventListener('push', (event) => {
     data: { path: '/' },
   };
 
-  try {
-    if (event.data) {
+  // Try to parse push data sent from server
+  if (event.data) {
+    try {
       const serverData = event.data.json();
       payload = { ...payload, ...serverData };
+    } catch (err) {
+      console.warn('Failed to parse push data', err);
     }
-  } catch (err) {
-    console.warn('Failed to parse push data', err);
   }
 
   const options = {
@@ -37,29 +41,28 @@ self.addEventListener('push', (event) => {
     renotify: payload.renotify || false,
   };
 
-  event.waitUntil(
-    self.registration.showNotification(payload.title, options)
-  );
+  event.waitUntil(self.registration.showNotification(payload.title, options));
 });
 
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const data = event.notification.data || {};
-  const path = data.path || '/';
+  const path = event.notification.data?.path || '/';
   const urlToOpen = new URL(path, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // If a tab with the same origin is open, focus it
       for (const client of windowClients) {
-        if (client.url.startsWith(self.location.origin)) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
           client.focus();
-          return client.navigate ? client.navigate(urlToOpen) : Promise.resolve();
+          if ('navigate' in client) {
+            return client.navigate(urlToOpen);
+          }
+          return;
         }
       }
-      // Otherwise, open a new tab
+      // Open new window if no matching tab
       return clients.openWindow(urlToOpen);
     })
   );
