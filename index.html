@@ -188,20 +188,16 @@ document.getElementById('jsonFilter').addEventListener('input', e=>{
   });
 });
 
-// --- Initial load + modal auto-open ---
+// --- Initial load (no modal auto-open) ---
 (async()=>{
   const posts = await loadPosts();
   renderPosts(posts);
-
-  const initialPost = getPostByPath(window.location.pathname, posts);
-  if(initialPost) showPostModal(initialPost);
 })();
 
 // --- Popstate for back/forward ---
 window.addEventListener('popstate', ()=>{
   const posts = document.querySelectorAll('.post');
-  const post = getPostByPath(window.location.pathname, posts);
-  if(post) showPostModal(post); else closeModal();
+  closeModal();
 });
 
 // --- PWA Service Worker + Push Subscription on First Click ---
