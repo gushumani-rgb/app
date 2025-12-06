@@ -3,7 +3,6 @@ const CACHE_NAME = 'site-cache-v1';
 const PRECACHE = [
   "/",
   "/index.json",
-  "/posts/Test/",
   "/posts/aviso-autoclicker/",
   "/posts/aviso-review/",
   "/posts/benable-guide/",
